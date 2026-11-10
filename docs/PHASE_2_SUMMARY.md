@@ -31,3 +31,4 @@ All Phase 2 tests in `backend/tests/test_phase2.py` passed with 100% success rat
   - Enforces school scope boundaries; correctly rejects 50 out-of-scope rows.
 - `test_streaming_export_compatibility`:
   - Validates exported Excel has sheet `Combine Sheet`, exactly 33 columns, exact header names, and accurately computed balance values.
+

@@ -52,3 +52,4 @@ def switch_database_connection(
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
     return {"success": True, "message": message}
+

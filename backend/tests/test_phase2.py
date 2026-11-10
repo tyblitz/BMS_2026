@@ -119,3 +119,4 @@ def test_streaming_export_compatibility():
 
     finally:
         session.close()
+

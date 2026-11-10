@@ -62,3 +62,4 @@ def test_audit_mixin_and_soft_delete():
 def test_database_manager_test_connection():
     ok, msg = db_manager.test_connection(db_manager.active_url)
     assert ok is True
+

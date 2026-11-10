@@ -73,3 +73,4 @@ db_manager = DatabaseManager()
 
 def get_db() -> Generator[Session, None, None]:
     yield from db_manager.get_session()
+

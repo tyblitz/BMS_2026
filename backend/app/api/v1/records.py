@@ -225,3 +225,4 @@ def delete_record(
     record.soft_delete(username=current_user.username)
     db.commit()
     return {"status": "success", "message": f"Record {id} soft-deleted successfully"}
+

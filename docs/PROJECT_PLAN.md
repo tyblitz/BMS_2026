@@ -146,13 +146,13 @@ gantt
 - [x] Balance calculations (`UNOBLIGATED`, `UNPAID`, etc.) correctly computed on API delivery and Excel export.
 - [x] Soft deletion and audit trail functional across all mutation routes.
 
-#### Milestone 3: Interactive Frontend (Vue 3 + Tailwind/Ionic) (UPCOMING - PHASE 4)
-- [ ] High-density virtualized data table rendering thousands of rows with instant client/server filtering.
-- [ ] Single and multi-file drag-and-drop upload modal with progress and duplicate stats.
-- [ ] In-line / Modal CRUD editor with live preview of computed balances.
+#### Milestone 3: Interactive Frontend (Vue 3 + Tailwind/Ionic) (COMPLETED - PHASE 4)
+- [x] High-density virtualized data table rendering thousands of rows with instant client/server filtering.
+- [x] Single and multi-file drag-and-drop upload modal with progress and duplicate stats.
+- [x] In-line / Modal CRUD editor with live preview of computed balances.
 
-#### Milestone 4: Database Connection Switcher & Access BMS Verification (IN PROGRESS - BACKEND COMPLETED)
+#### Milestone 4: Database Connection Switcher & Access BMS Verification (COMPLETED - PHASE 4 & 5 READY)
 - [x] Backend API allows seamless connection testing and switching between local SQLite, local XAMPP MySQL, and remote servers.
 - [x] Exported `.xlsx` verified to have exact 33 columns and `Combine Sheet` for MS Access BMS import.
-- [ ] Admin UI frontend component for database switching.
+- [x] Admin UI frontend component for database switching.
 

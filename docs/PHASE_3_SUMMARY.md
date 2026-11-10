@@ -40,3 +40,4 @@ All Phase 3 integration and security tests in `backend/tests/test_phase3.py` pas
 - `test_crud_lifecycle_and_soft_delete`: Validates creation, dynamic balance calculation response, update tracking, soft-deletion, and DB-level retention.
 - `test_upload_and_export_api`: Validates batch upload ingestion and round-trip streaming export.
 - `test_database_settings_api`: Validates dynamic database switcher endpoints.
+

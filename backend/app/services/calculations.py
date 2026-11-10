@@ -52,3 +52,4 @@ def calculate_balances(
         "unpaid": unpaid,
         "unreleased": unreleased,
     }
+
