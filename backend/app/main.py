@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import db_manager
-from app.api.v1 import auth, records, upload, export, settings as settings_api
+from app.api.v1 import auth, records, upload, export, settings as settings_api, users
 
 from contextlib import asynccontextmanager
 
@@ -37,6 +37,7 @@ app.include_router(records.router, prefix=settings.API_V1_STR)
 app.include_router(upload.router, prefix=settings.API_V1_STR)
 app.include_router(export.router, prefix=settings.API_V1_STR)
 app.include_router(settings_api.router, prefix=settings.API_V1_STR)
+app.include_router(users.router, prefix=settings.API_V1_STR)
 
 
 

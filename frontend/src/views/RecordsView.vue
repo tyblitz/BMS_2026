@@ -360,3 +360,4 @@ onMounted(() => {
   recordsStore.fetchRecords()
 })
 </script>
+

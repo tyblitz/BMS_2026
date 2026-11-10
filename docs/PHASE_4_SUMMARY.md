@@ -46,3 +46,4 @@ Phase 4 delivered the Single Page Application (SPA) frontend for the BMS platfor
   - `dist/assets/index-BHdbhAcd.js` (208.17 kB)
 - Verified with programmatic test that `GET /` serves the production index HTML directly from FastAPI.
 - All 12 backend unit and integration tests continue to pass with 100% success rate.
+

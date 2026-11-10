@@ -226,3 +226,25 @@ def delete_record(
     db.commit()
     return {"status": "success", "message": f"Record {id} soft-deleted successfully"}
 
+
+@router.post("/{id}/restore", response_model=BMSRecordResponse)
+def restore_record(
+    id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Restores a soft-deleted record back to active status."""
+    record = db.query(BMSRecord).filter(BMSRecord.id == id).first()
+    if not record or not record.is_deleted:
+        raise HTTPException(status_code=404, detail="Archived record not found.")
+
+    record.is_deleted = False
+    record.deleted_on = None
+    record.deleted_by = None
+    record.edited_on = datetime.now(timezone.utc)
+    record.edited_by = current_user.username
+    db.commit()
+    db.refresh(record)
+    return BMSRecordResponse.model_validate(record)
+
+

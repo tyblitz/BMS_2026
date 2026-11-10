@@ -32,6 +32,14 @@
           </router-link>
           <router-link
             v-if="authStore.isAdmin"
+            to="/users"
+            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            :class="$route.path === '/users' ? 'bg-deped-dark text-white' : 'text-blue-100 hover:bg-blue-800'"
+          >
+            User Accounts
+          </router-link>
+          <router-link
+            v-if="authStore.isAdmin"
             to="/settings"
             class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             :class="$route.path === '/settings' ? 'bg-deped-dark text-white' : 'text-blue-100 hover:bg-blue-800'"
@@ -82,3 +90,4 @@ const handleLogout = () => {
   router.push('/login')
 }
 </script>
+

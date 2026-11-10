@@ -4,6 +4,7 @@ import LoginView from '@/views/LoginView.vue'
 import RecordsView from '@/views/RecordsView.vue'
 import UploadView from '@/views/UploadView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import UsersView from '@/views/UsersView.vue'
 
 const routes = [
   {
@@ -25,6 +26,11 @@ const routes = [
     path: '/upload',
     name: 'Upload',
     component: UploadView,
+  },
+  {
+    path: '/users',
+    name: 'Users',
+    component: UsersView,
   },
   {
     path: '/settings',
@@ -50,3 +56,4 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+

@@ -22,3 +22,4 @@
 .bms-card {
   @apply bg-white rounded-xl shadow-sm border border-slate-200/80 transition-all duration-200;
 }
+
