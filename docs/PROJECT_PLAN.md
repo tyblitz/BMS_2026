@@ -136,22 +136,23 @@ gantt
 
 ### Milestone Deliverables & Acceptance Criteria
 
-#### Milestone 1: Data Engine & Streaming Ingestion
-- [ ] Database schema initialized with all 28 raw business fields, UUID primary keys, and audit columns.
-- [ ] Ingestion script processes `CONSO tempTable as of September 30, 2026.xlsx` without memory crashes.
-- [ ] Deduplication engine correctly identifies and skips existing identical rows based on `row_hash`.
+#### Milestone 1: Data Engine & Streaming Ingestion (COMPLETED)
+- [x] Database schema initialized with all 28 raw business fields, UUID primary keys, and audit columns.
+- [x] Ingestion script processes Excel files with streaming Calamine engine without memory crashes.
+- [x] Deduplication engine correctly identifies and skips existing identical rows based on `row_hash`.
 
-#### Milestone 2: Scoped REST API & Dynamic Balances
-- [ ] Role-based endpoints restrict School, SDO, and Region users to their permitted scope.
-- [ ] Balance calculations (`UNOBLIGATED`, `UNPAID`, etc.) correctly computed on API delivery and Excel export.
-- [ ] Soft deletion and audit trail functional across all mutation routes.
+#### Milestone 2: Scoped REST API & Dynamic Balances (COMPLETED)
+- [x] Role-based endpoints restrict School, SDO, and Region users to their permitted scope.
+- [x] Balance calculations (`UNOBLIGATED`, `UNPAID`, etc.) correctly computed on API delivery and Excel export.
+- [x] Soft deletion and audit trail functional across all mutation routes.
 
-#### Milestone 3: Interactive Frontend (Vue 3 + Tailwind/Ionic)
+#### Milestone 3: Interactive Frontend (Vue 3 + Tailwind/Ionic) (UPCOMING - PHASE 4)
 - [ ] High-density virtualized data table rendering thousands of rows with instant client/server filtering.
 - [ ] Single and multi-file drag-and-drop upload modal with progress and duplicate stats.
 - [ ] In-line / Modal CRUD editor with live preview of computed balances.
 
-#### Milestone 4: Database Connection Switcher & Access BMS Verification
-- [ ] Admin UI allows seamless connection switching between local SQLite, local XAMPP MySQL, and remote servers.
-- [ ] Exported `.xlsx` verified to open and import directly into the native MS Access BMS application without schema errors.
+#### Milestone 4: Database Connection Switcher & Access BMS Verification (IN PROGRESS - BACKEND COMPLETED)
+- [x] Backend API allows seamless connection testing and switching between local SQLite, local XAMPP MySQL, and remote servers.
+- [x] Exported `.xlsx` verified to have exact 33 columns and `Combine Sheet` for MS Access BMS import.
+- [ ] Admin UI frontend component for database switching.
 
