@@ -136,23 +136,24 @@ gantt
 
 ### Milestone Deliverables & Acceptance Criteria
 
-#### Milestone 1: Data Engine & Streaming Ingestion (COMPLETED)
+#### Milestone 1: Data Engine & Streaming Ingestion (COMPLETED - PHASE 1 & 2)
 - [x] Database schema initialized with all 28 raw business fields, UUID primary keys, and audit columns.
 - [x] Ingestion script processes Excel files with streaming Calamine engine without memory crashes.
 - [x] Deduplication engine correctly identifies and skips existing identical rows based on `row_hash`.
 
-#### Milestone 2: Scoped REST API & Dynamic Balances (COMPLETED)
+#### Milestone 2: Scoped REST API & Dynamic Balances (COMPLETED - PHASE 3)
 - [x] Role-based endpoints restrict School, SDO, and Region users to their permitted scope.
 - [x] Balance calculations (`UNOBLIGATED`, `UNPAID`, etc.) correctly computed on API delivery and Excel export.
 - [x] Soft deletion and audit trail functional across all mutation routes.
 
 #### Milestone 3: Interactive Frontend (Vue 3 + Tailwind/Ionic) (COMPLETED - PHASE 4)
-- [x] High-density virtualized data table rendering thousands of rows with instant client/server filtering.
+- [x] High-density data table rendering thousands of rows with instant client/server filtering.
 - [x] Single and multi-file drag-and-drop upload modal with progress and duplicate stats.
 - [x] In-line / Modal CRUD editor with live preview of computed balances.
 
-#### Milestone 4: Database Connection Switcher & Access BMS Verification (COMPLETED - PHASE 4 & 5 READY)
+#### Milestone 4: Database Connection Switcher & Access BMS Verification (COMPLETED - PHASE 5 & 6)
 - [x] Backend API allows seamless connection testing and switching between local SQLite, local XAMPP MySQL, and remote servers.
 - [x] Exported `.xlsx` verified to have exact 33 columns and `Combine Sheet` for MS Access BMS import.
 - [x] Admin UI frontend component for database switching.
+- [x] End-to-end roundtrip integration test verified across 16 automated tests.
 

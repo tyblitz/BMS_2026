@@ -21,14 +21,26 @@ EXPECTED_HEADERS = [
 def compute_row_hash(row: dict) -> str:
     """
     Computes a deterministic SHA-256 fingerprint from core business fields.
-    Guarantees idempotency and strict row-level deduplication across imports.
+    Normalizes numeric amounts to 2 decimal places to guarantee cross-system idempotency.
     """
-    sig = "|".join(str(row.get(k) or "").strip() for k in [
+    numeric_keys = {
+        "ObligationsIncurred", "Disbursement", "Appropriations",
+        "Allotment", "TransferTo", "TransferFrom", "DVAmount"
+    }
+    parts = []
+    for k in [
         "OperatingUnit", "DateBMS", "AccountCode", "UACSPAPCODE",
         "Particulars", "ObligationsIncurred", "Disbursement",
         "Appropriations", "Allotment", "FundSource", "TransferTo",
         "TransferFrom", "DVAmount"
-    ])
+    ]:
+        val = row.get(k)
+        if k in numeric_keys:
+            parts.append(f"{to_decimal(val):.2f}")
+        else:
+            parts.append(str(val or "").strip())
+
+    sig = "|".join(parts)
     return hashlib.sha256(sig.encode("utf-8")).hexdigest()
 
 
