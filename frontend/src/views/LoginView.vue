@@ -67,6 +67,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getHomeRouteForRole } from '@/router'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -77,7 +78,8 @@ const password = ref('Admin123!')
 const handleSubmit = async () => {
   const success = await authStore.login(username.value, password.value)
   if (success) {
-    router.push('/records')
+    const targetRoute = getHomeRouteForRole(authStore.userRole)
+    router.push(targetRoute)
   }
 }
 </script>

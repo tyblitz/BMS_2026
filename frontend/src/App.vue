@@ -3,8 +3,8 @@
     <!-- Top Navigation Bar (Shown when authenticated) -->
     <header v-if="authStore.isAuthenticated" class="bg-deped-blue text-white shadow-md sticky top-0 z-30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-        <!-- Brand / Logo -->
-        <div class="flex items-center space-x-3">
+        <!-- Brand / Logo (Clickable to role home) -->
+        <router-link :to="homeRoute" class="flex items-center space-x-3 hover:opacity-90 transition">
           <div class="w-12 h-10 rounded-lg bg-deped-gold flex items-center justify-center font-bold text-deped-dark shadow-sm text-sm">
             BURS
           </div>
@@ -12,24 +12,38 @@
             <span class="font-bold text-lg tracking-tight block leading-tight">DepEd NCR BURS</span>
             <span class="text-xs text-blue-200 block">Budget Utilization and Reporting System</span>
           </div>
-        </div>
+        </router-link>
 
-        <!-- Navigation Links -->
+        <!-- Navigation Links (Role Scoped) -->
         <nav class="hidden md:flex items-center space-x-1">
+          <!-- Role Dashboard Link -->
+          <router-link
+            :to="homeRoute"
+            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            :class="$route.path.includes('/dashboard') ? 'bg-deped-dark text-white' : 'text-blue-100 hover:bg-blue-800'"
+          >
+            {{ dashboardLabel }}
+          </router-link>
+
+          <!-- Budget Records -->
           <router-link
             to="/records"
             class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             :class="$route.path === '/records' ? 'bg-deped-dark text-white' : 'text-blue-100 hover:bg-blue-800'"
           >
-            Budget Records
+            {{ authStore.isSchool ? 'School Records' : 'Budget Records' }}
           </router-link>
+
+          <!-- Upload & Consolidate -->
           <router-link
             to="/upload"
             class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             :class="$route.path === '/upload' ? 'bg-deped-dark text-white' : 'text-blue-100 hover:bg-blue-800'"
           >
-            Upload & Consolidate
+            {{ authStore.isSchool ? 'Upload tempTable' : 'Upload & Consolidate' }}
           </router-link>
+
+          <!-- Admin Only -->
           <router-link
             v-if="authStore.isAdmin"
             to="/users"
@@ -79,11 +93,30 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { getHomeRouteForRole } from '@/router'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+const homeRoute = computed(() => getHomeRouteForRole(authStore.userRole))
+
+const dashboardLabel = computed(() => {
+  switch (authStore.userRole) {
+    case 'school':
+      return 'School Dashboard'
+    case 'sdo':
+      return 'Division Dashboard'
+    case 'region':
+      return 'Regional Dashboard'
+    case 'admin':
+      return 'Admin Dashboard'
+    default:
+      return 'Dashboard'
+  }
+})
 
 const handleLogout = () => {
   authStore.logout()
