@@ -31,12 +31,9 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       this.error = null
       try {
-        const formData = new FormData()
-        formData.append('username', username)
-        formData.append('password', password)
-
-        const response = await apiClient.post('/auth/login', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        const response = await apiClient.post('/auth/login', {
+          username: String(username).trim(),
+          password: String(password).trim(),
         })
 
         this.token = response.data.access_token
