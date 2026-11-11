@@ -110,3 +110,4 @@ def test_soft_delete_and_restore_record():
 
     finally:
         session.close()
+

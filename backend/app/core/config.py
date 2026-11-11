@@ -10,7 +10,7 @@ CONFIG_FILE = DATA_DIR / "db_config.json"
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "BMS Web Application"
+    PROJECT_NAME: str = "DepEd NCR BURS (Budget Utilization and Reporting System)"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     

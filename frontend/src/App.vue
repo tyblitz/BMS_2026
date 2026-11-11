@@ -5,12 +5,12 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
         <!-- Brand / Logo -->
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-lg bg-deped-gold flex items-center justify-center font-bold text-deped-dark shadow-sm">
-            BMS
+          <div class="w-12 h-10 rounded-lg bg-deped-gold flex items-center justify-center font-bold text-deped-dark shadow-sm text-sm">
+            BURS
           </div>
           <div>
-            <span class="font-bold text-lg tracking-tight block">Budget Monitoring System</span>
-            <span class="text-xs text-blue-200 block">DepEd Financial Consolidation Portal</span>
+            <span class="font-bold text-lg tracking-tight block leading-tight">DepEd NCR BURS</span>
+            <span class="text-xs text-blue-200 block">Budget Utilization and Reporting System</span>
           </div>
         </div>
 
@@ -73,7 +73,7 @@
 
     <!-- Footer -->
     <footer v-if="authStore.isAuthenticated" class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500">
-      Department of Education &bull; Budget Monitoring System (BMS 2026) &bull; Standalone & Conso Web Platform
+      Department of Education NCR &bull; Budget Utilization and Reporting System (BURS) &bull; Financial Consolidation Platform
     </footer>
   </div>
 </template>

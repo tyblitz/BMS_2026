@@ -24,3 +24,4 @@ Phase 5 established the administrative user provisioning portal, organizational 
 All Phase 5 tests in `backend/tests/test_phase5.py` passed with 100% success rate:
 - `test_user_management_crud`: Validates user creation, role assignment, data scope persistence, updates, soft-deletion, and self-deletion prevention.
 - `test_soft_delete_and_restore_record`: Validates the complete lifecycle: active $\rightarrow$ soft-delete $\rightarrow$ restore back to active state.
+

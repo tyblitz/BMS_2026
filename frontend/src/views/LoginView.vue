@@ -3,11 +3,11 @@
     <div class="max-w-md w-full bms-card p-8 bg-white/95 backdrop-blur shadow-2xl border-slate-100">
       <!-- Header -->
       <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-deped-blue text-deped-gold rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-lg ring-4 ring-blue-100">
-          BMS
+        <div class="w-16 h-16 bg-deped-blue text-deped-gold rounded-2xl flex items-center justify-center text-xl font-extrabold mx-auto mb-4 shadow-lg ring-4 ring-blue-100 tracking-wider">
+          BURS
         </div>
-        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">DepEd Budget Monitoring</h2>
-        <p class="text-sm text-slate-500 mt-1">Hierarchical Consolidation & Management Portal</p>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">DepEd NCR BURS</h2>
+        <p class="text-sm text-slate-500 mt-1">Budget Utilization and Reporting System</p>
       </div>
 
       <!-- Error Alert -->
