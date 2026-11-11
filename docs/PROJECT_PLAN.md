@@ -157,3 +157,49 @@ gantt
 - [x] Admin UI frontend component for database switching.
 - [x] End-to-end roundtrip integration test verified across 16 automated tests.
 
+---
+
+## 6. Role-Based Workspaces & Dynamic Redirection (Phases 7–12)
+
+```mermaid
+flowchart TD
+    Login["User Logs In (/login)"] --> CheckRole{"Evaluate Role"}
+    CheckRole -->|school| SchoolHub["School Workspace (/school/dashboard)"]
+    CheckRole -->|sdo| SDOHub["SDO Consolidation Hub (/sdo/dashboard)"]
+    CheckRole -->|region| RegionHub["Regional Executive Dashboard (/region/dashboard)"]
+    CheckRole -->|admin| AdminHub["Admin Control Center (/admin/dashboard)"]
+```
+
+### Phase 7: Dynamic Redirection & Navigation Guards
+- [ ] Post-login automatic redirection by role (`school`, `sdo`, `region`, `admin`).
+- [ ] Route-level permission guards (`meta: { roles: [...] }`) with automatic fallback to role dashboard.
+- [ ] Dynamic top navigation bar rendering only role-relevant views.
+
+### Phase 8: School Workspace (`/school/dashboard`)
+- [ ] Backend School Summary API (`/api/v1/analytics/school-summary`).
+- [ ] School financial health KPI cards (Allotment, Obligations, Disbursements, Unobligated, Unpaid).
+- [ ] Quick actions: "Upload tempTable", "Add Line Item", "Export School Records".
+- [ ] School-specific transaction table.
+
+### Phase 9: SDO Consolidation & Compliance Hub (`/sdo/dashboard`)
+- [ ] Backend Division Analytics API (`/api/v1/analytics/division-summary`).
+- [ ] Division KPI Summary banner & % Utilization progress.
+- [ ] School Submission & Compliance Tracker (Status matrix of all schools under the division).
+- [ ] Division-wide consolidation & MS Access export action.
+
+### Phase 10: Regional Office Executive Dashboard (`/region/dashboard`)
+- [ ] Backend Regional Analytics API (`/api/v1/analytics/region-summary`).
+- [ ] NCR macro executive KPIs (Total Budget, Released, Obligations, Disbursements, % Utilization).
+- [ ] 16-Division comparative leaderboard table with drill-down capability.
+- [ ] Master 208k+ row regional consolidation export.
+
+### Phase 11: Admin Operations Control Center (`/admin/dashboard`)
+- [ ] Database engine & connection health monitor.
+- [ ] Account directory overview & quick access to `/users` and `/settings`.
+- [ ] System activity & ingestion logs.
+
+### Phase 12: Testing & Security Verification
+- [ ] Automated role-guard and permission tests.
+- [ ] End-to-end multi-role login and data scoping verification.
+
+
