@@ -25,17 +25,17 @@ async def login(
     username = None
     password = None
 
-    # Check content type
-    content_type = request.headers.get("content-type", "")
-
-    if "application/json" in content_type:
-        try:
-            body = await request.json()
+    # First attempt to parse JSON body
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
             username = body.get("username")
             password = body.get("password")
-        except Exception:
-            pass
-    else:
+    except Exception:
+        pass
+
+    # If not found, attempt form data (e.g. from Swagger docs)
+    if not username:
         try:
             form = await request.form()
             username = form.get("username")

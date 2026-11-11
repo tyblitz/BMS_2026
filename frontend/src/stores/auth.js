@@ -43,7 +43,14 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('bms_user', JSON.stringify(this.user))
         return true
       } catch (err) {
-        this.error = err.response?.data?.detail || 'Login failed. Please check credentials.'
+        const detail = err.response?.data?.detail
+        if (Array.isArray(detail)) {
+          this.error = detail.map((d) => d.msg || JSON.stringify(d)).join(', ')
+        } else if (typeof detail === 'string') {
+          this.error = detail
+        } else {
+          this.error = 'Login failed. Please check credentials.'
+        }
         return false
       } finally {
         this.loading = false

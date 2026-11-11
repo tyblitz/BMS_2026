@@ -20,5 +20,5 @@ if __name__ == "__main__":
     print("  Default Admin:   username='admin', password='Admin123!'")
     print("=" * 72)
     
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=False, app_dir="backend")
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True, app_dir="backend")
 
