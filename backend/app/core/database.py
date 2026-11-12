@@ -1,6 +1,6 @@
 import os
 from typing import Generator
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from app.core.config import settings
 from app.models.base import Base
@@ -21,7 +21,18 @@ class DatabaseManager:
         connect_args = {}
         if url.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
-        return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+        engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+        if url.startswith("sqlite"):
+            @event.listens_for(engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                try:
+                    cursor.execute("PRAGMA journal_mode=WAL")
+                    cursor.execute("PRAGMA synchronous=NORMAL")
+                    cursor.execute("PRAGMA cache_size=-64000")
+                finally:
+                    cursor.close()
+        return engine
 
     def get_session(self) -> Generator[Session, None, None]:
         db = self.SessionLocal()

@@ -58,6 +58,9 @@ class BMSRecord(Base, AuditMixin):
 
     __table_args__ = (
         Index("idx_scope_query", "region", "division", "operating_unit", "is_deleted"),
+        Index("idx_school_active", "operating_unit", "is_deleted"),
+        Index("idx_division_active", "division", "is_deleted"),
+        Index("idx_region_active", "region", "is_deleted"),
         Index("idx_financial_filter", "allotment_class", "account_code", "fund_source"),
     )
 

@@ -121,20 +121,37 @@ def get_school_summary(
         else 0.0
     )
 
-    # Fetch Division and Region for context
-    sample_rec = (
-        db.query(BMSRecord.division, BMSRecord.region)
-        .filter(BMSRecord.operating_unit == target_school, BMSRecord.is_deleted == False)
-        .first()
-    )
-    division_name = sample_rec.division if sample_rec else current_user.division or ""
-    region_name = sample_rec.region if sample_rec else current_user.region or "National Capital Region (NCR)"
+    # Use context from authenticated user or quick lookup
+    division_name = current_user.division or ""
+    region_name = current_user.region or "National Capital Region (NCR)"
+    if not division_name:
+        sample_rec = (
+            db.query(BMSRecord.division, BMSRecord.region)
+            .filter(BMSRecord.operating_unit == target_school, BMSRecord.is_deleted == False)
+            .first()
+        )
+        if sample_rec:
+            division_name = sample_rec.division
+            region_name = sample_rec.region
 
-    # Fetch 5 most recent records
+    # Fetch 5 records using lightweight column projection (avoids full ORM entity hydration)
     recent_records = (
-        db.query(BMSRecord)
+        db.query(
+            BMSRecord.id,
+            BMSRecord.date_bms,
+            BMSRecord.particulars,
+            BMSRecord.uacs_pap_code,
+            BMSRecord.account_code,
+            BMSRecord.appropriations,
+            BMSRecord.appro_adjust,
+            BMSRecord.allotment,
+            BMSRecord.realignment,
+            BMSRecord.transfer_from,
+            BMSRecord.transfer_to,
+            BMSRecord.obligations_incurred,
+            BMSRecord.disbursement,
+        )
         .filter(BMSRecord.operating_unit == target_school, BMSRecord.is_deleted == False)
-        .order_by(BMSRecord.created_on.desc())
         .limit(5)
         .all()
     )
