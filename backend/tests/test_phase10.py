@@ -122,3 +122,4 @@ def test_region_summary_forbidden_for_sdo():
         headers={"Authorization": f"Bearer {sdo_token}"},
     )
     assert resp.status_code == 403
+

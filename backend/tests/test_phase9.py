@@ -131,3 +131,4 @@ def test_division_summary_forbidden_for_school():
         headers={"Authorization": f"Bearer {school_token}"},
     )
     assert resp.status_code == 403
+

@@ -467,3 +467,115 @@ def get_region_summary(
         "disbursement_rate": disbursement_rate,
         "divisions_matrix": divisions_matrix,
     }
+
+
+@router.get("/admin-summary")
+def get_admin_summary(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns administrative control center telemetry: database health, user metrics,
+    and system-wide financial figures.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="System telemetry requires Administrator authorization.",
+        )
+
+    # 1. Database telemetry
+    from app.core.database import db_manager
+    active_url = db_manager.active_url
+    engine_name = "SQLite"
+    if active_url.startswith("mysql"):
+        engine_name = "MySQL / MariaDB"
+    elif active_url.startswith("postgresql"):
+        engine_name = "PostgreSQL"
+
+    active_records_count = db.query(func.count(BMSRecord.id)).filter(BMSRecord.is_deleted == False).scalar() or 0
+    deleted_records_count = db.query(func.count(BMSRecord.id)).filter(BMSRecord.is_deleted == True).scalar() or 0
+
+    # 2. User directory metrics
+    total_users = db.query(func.count(User.id)).scalar() or 0
+    admin_users = db.query(func.count(User.id)).filter(User.role == "admin").scalar() or 0
+    region_users = db.query(func.count(User.id)).filter(User.role == "region").scalar() or 0
+    sdo_users = db.query(func.count(User.id)).filter(User.role == "sdo").scalar() or 0
+    school_users = db.query(func.count(User.id)).filter(User.role == "school").scalar() or 0
+    active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar() or 0
+
+    # 3. Operational Counts
+    divisions_count = db.query(func.count(func.distinct(BMSRecord.division))).filter(BMSRecord.is_deleted == False).scalar() or 0
+    schools_count = db.query(func.count(func.distinct(BMSRecord.operating_unit))).filter(BMSRecord.is_deleted == False).scalar() or 0
+
+    # 4. Financial totals
+    fin_query = db.query(
+        func.coalesce(func.sum(BMSRecord.appropriations), 0).label("sum_appro"),
+        func.coalesce(func.sum(BMSRecord.appro_adjust), 0).label("sum_appro_adjust"),
+        func.coalesce(func.sum(BMSRecord.allotment), 0).label("sum_allotment"),
+        func.coalesce(func.sum(BMSRecord.realignment), 0).label("sum_realignment"),
+        func.coalesce(func.sum(BMSRecord.transfer_from), 0).label("sum_transfer_from"),
+        func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("sum_transfer_to"),
+        func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("sum_obligations"),
+        func.coalesce(func.sum(BMSRecord.disbursement), 0).label("sum_disbursement"),
+    ).filter(BMSRecord.is_deleted == False).first()
+
+    appro = to_decimal(fin_query.sum_appro if fin_query else 0)
+    appro_adj = to_decimal(fin_query.sum_appro_adjust if fin_query else 0)
+    allot = to_decimal(fin_query.sum_allotment if fin_query else 0)
+    realign = to_decimal(fin_query.sum_realignment if fin_query else 0)
+    trans_from = to_decimal(fin_query.sum_transfer_from if fin_query else 0)
+    trans_to = to_decimal(fin_query.sum_transfer_to if fin_query else 0)
+    obligations = to_decimal(fin_query.sum_obligations if fin_query else 0)
+    disbursement = to_decimal(fin_query.sum_disbursement if fin_query else 0)
+
+    bals = calculate_balances(
+        appropriations=appro,
+        appro_adjust=appro_adj,
+        allotment=allot,
+        realignment=realign,
+        transfer_from=trans_from,
+        transfer_to=trans_to,
+        obligations_incurred=obligations,
+        disbursement=disbursement,
+    )
+
+    adj_allotment = bals["total_adjusted_allotment"]
+    unobligated = bals["unobligated"]
+    unpaid = bals["unpaid"]
+
+    utilization_rate = (
+        round(float((obligations / adj_allotment) * Decimal("100")), 2)
+        if adj_allotment > Decimal("0")
+        else 0.0
+    )
+
+    return {
+        "database": {
+            "engine": engine_name,
+            "url_display": active_url.split("?")[0] if "@" not in active_url else active_url.split("@")[-1],
+            "active_records": active_records_count,
+            "deleted_records": deleted_records_count,
+            "status": "Connected & Operational",
+        },
+        "users": {
+            "total": total_users,
+            "admin": admin_users,
+            "region": region_users,
+            "sdo": sdo_users,
+            "school": school_users,
+            "active": active_users,
+        },
+        "operational": {
+            "divisions_count": divisions_count,
+            "schools_count": schools_count,
+        },
+        "financial": {
+            "total_adjusted_allotment": float(adj_allotment),
+            "total_obligations": float(obligations),
+            "total_disbursements": float(disbursement),
+            "unobligated_balance": float(unobligated),
+            "unpaid_balance": float(unpaid),
+            "utilization_rate": utilization_rate,
+        },
+    }
