@@ -13,6 +13,7 @@ from app.api.deps import get_current_user
 router = APIRouter(prefix="/export", tags=["Excel Export"])
 
 
+@router.get("")
 @router.get("/excel")
 def export_consolidated_excel(
     operating_unit: Optional[str] = None,
