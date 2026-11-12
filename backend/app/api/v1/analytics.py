@@ -325,3 +325,145 @@ def get_division_summary(
         "disbursement_rate": disbursement_rate,
         "schools_matrix": schools_matrix,
     }
+
+
+@router.get("/region-summary")
+def get_region_summary(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns executive macro-level financial analytics across all 16 SDOs in NCR.
+    Strictly adheres to dynamic balance formulas (Rule 1).
+    """
+    if current_user.role not in ["admin", "region"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Regional executive analytics require Regional Office or Administrator authorization.",
+        )
+
+    target_region = "National Capital Region (NCR)"
+
+    # 1. Macro NCR Totals
+    reg_query = db.query(
+        func.count(BMSRecord.id).label("total_records"),
+        func.count(func.distinct(BMSRecord.division)).label("total_divisions"),
+        func.count(func.distinct(BMSRecord.operating_unit)).label("total_schools"),
+        func.coalesce(func.sum(BMSRecord.appropriations), 0).label("sum_appro"),
+        func.coalesce(func.sum(BMSRecord.appro_adjust), 0).label("sum_appro_adjust"),
+        func.coalesce(func.sum(BMSRecord.allotment), 0).label("sum_allotment"),
+        func.coalesce(func.sum(BMSRecord.realignment), 0).label("sum_realignment"),
+        func.coalesce(func.sum(BMSRecord.transfer_from), 0).label("sum_transfer_from"),
+        func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("sum_transfer_to"),
+        func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("sum_obligations"),
+        func.coalesce(func.sum(BMSRecord.disbursement), 0).label("sum_disbursement"),
+    ).filter(
+        BMSRecord.is_deleted == False,
+        BMSRecord.region == target_region,
+    ).first()
+
+    total_records = reg_query.total_records if reg_query else 0
+    total_divisions = reg_query.total_divisions if reg_query else 0
+    total_schools = reg_query.total_schools if reg_query else 0
+
+    appro = to_decimal(reg_query.sum_appro if reg_query else 0)
+    appro_adj = to_decimal(reg_query.sum_appro_adjust if reg_query else 0)
+    allot = to_decimal(reg_query.sum_allotment if reg_query else 0)
+    realign = to_decimal(reg_query.sum_realignment if reg_query else 0)
+    trans_from = to_decimal(reg_query.sum_transfer_from if reg_query else 0)
+    trans_to = to_decimal(reg_query.sum_transfer_to if reg_query else 0)
+    obligations = to_decimal(reg_query.sum_obligations if reg_query else 0)
+    disbursement = to_decimal(reg_query.sum_disbursement if reg_query else 0)
+
+    bals = calculate_balances(
+        appropriations=appro,
+        appro_adjust=appro_adj,
+        allotment=allot,
+        realignment=realign,
+        transfer_from=trans_from,
+        transfer_to=trans_to,
+        obligations_incurred=obligations,
+        disbursement=disbursement,
+    )
+
+    adj_allotment = bals["total_adjusted_allotment"]
+    unobligated = bals["unobligated"]
+    unpaid = bals["unpaid"]
+    adj_appro = bals["total_adjusted_appro"]
+
+    utilization_rate = (
+        round(float((obligations / adj_allotment) * Decimal("100")), 2)
+        if adj_allotment > Decimal("0")
+        else 0.0
+    )
+    disbursement_rate = (
+        round(float((disbursement / obligations) * Decimal("100")), 2)
+        if obligations > Decimal("0")
+        else 0.0
+    )
+
+    # 2. 16-Division Comparative Breakdown
+    div_rows = (
+        db.query(
+            BMSRecord.division.label("division_name"),
+            func.count(BMSRecord.id).label("record_count"),
+            func.count(func.distinct(BMSRecord.operating_unit)).label("schools_count"),
+            func.coalesce(func.sum(BMSRecord.allotment), 0).label("sum_allot"),
+            func.coalesce(func.sum(BMSRecord.realignment), 0).label("sum_realign"),
+            func.coalesce(func.sum(BMSRecord.transfer_from), 0).label("sum_tfrom"),
+            func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("sum_tto"),
+            func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("sum_obli"),
+            func.coalesce(func.sum(BMSRecord.disbursement), 0).label("sum_disb"),
+        )
+        .filter(
+            BMSRecord.is_deleted == False,
+            BMSRecord.region == target_region,
+        )
+        .group_by(BMSRecord.division)
+        .order_by(BMSRecord.division.asc())
+        .all()
+    )
+
+    divisions_matrix = []
+    for d in div_rows:
+        d_allot = to_decimal(d.sum_allot) + to_decimal(d.sum_realign) + to_decimal(d.sum_tfrom) - to_decimal(d.sum_tto)
+        d_obli = to_decimal(d.sum_obli)
+        d_disb = to_decimal(d.sum_disb)
+        d_unobli = d_allot - d_obli
+        d_unpaid = d_obli - d_disb
+        d_rate = (
+            round(float((d_obli / d_allot) * Decimal("100")), 2)
+            if d_allot > Decimal("0")
+            else 0.0
+        )
+
+        divisions_matrix.append({
+            "division": d.division_name,
+            "schools_count": d.schools_count,
+            "record_count": d.record_count,
+            "total_adjusted_allotment": float(d_allot),
+            "total_obligations": float(d_obli),
+            "total_disbursements": float(d_disb),
+            "unobligated_balance": float(d_unobli),
+            "unpaid_balance": float(d_unpaid),
+            "utilization_rate": d_rate,
+        })
+
+    # Sort by utilization rate descending for leaderboard ranking
+    divisions_matrix.sort(key=lambda x: x["utilization_rate"], reverse=True)
+
+    return {
+        "region": target_region,
+        "total_divisions": total_divisions,
+        "total_schools": total_schools,
+        "total_records": total_records,
+        "total_adjusted_appro": float(adj_appro),
+        "total_adjusted_allotment": float(adj_allotment),
+        "total_obligations": float(obligations),
+        "total_disbursements": float(disbursement),
+        "unobligated_balance": float(unobligated),
+        "unpaid_balance": float(unpaid),
+        "utilization_rate": utilization_rate,
+        "disbursement_rate": disbursement_rate,
+        "divisions_matrix": divisions_matrix,
+    }
