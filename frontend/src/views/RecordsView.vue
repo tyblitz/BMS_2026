@@ -79,7 +79,7 @@
 
     <!-- Filter Bar -->
     <div class="bms-card p-4 bg-white">
-      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-6 gap-3">
         <!-- Search text -->
         <div class="sm:col-span-2">
           <input
@@ -89,6 +89,24 @@
             placeholder="Search particulars, PPA, account code, station..."
             class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-deped-blue focus:outline-none"
           />
+        </div>
+
+        <!-- Operating Unit / School Dropdown -->
+        <div v-if="operatingUnits.length > 1">
+          <select
+            v-model="recordsStore.filters.operating_unit"
+            @change="handleFilterChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option value="">All Schools & Stations</option>
+            <option
+              v-for="ou in operatingUnits"
+              :key="ou"
+              :value="ou"
+            >
+              {{ isSdoProper(ou) ? '🏛️ ' + ou + ' (SDO Proper)' : '🏫 ' + ou }}
+            </option>
+          </select>
         </div>
 
         <!-- Allotment Class Filter -->
@@ -119,7 +137,7 @@
         <!-- Reset Button -->
         <div class="flex items-center space-x-2">
           <button
-            @click="recordsStore.resetFilters"
+            @click="handleResetFilters"
             class="w-full text-xs py-2 px-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg font-medium transition"
           >
             Reset Filters
@@ -167,9 +185,17 @@
               :key="rec.id"
               class="hover:bg-blue-50/40 transition-colors group"
             >
-              <!-- Operating Unit -->
-              <td class="py-2.5 px-3.5 font-medium text-slate-800 max-w-[180px] truncate" :title="rec.operating_unit">
-                {{ rec.operating_unit }}
+              <!-- Operating Unit (School or SDO Proper) -->
+              <td class="py-2.5 px-3.5 font-medium max-w-[200px] truncate" :title="rec.operating_unit">
+                <span
+                  v-if="isSdoProper(rec.operating_unit, rec.division)"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200"
+                >
+                  🏛️ SDO Proper Office
+                </span>
+                <span v-else class="inline-flex items-center gap-1 font-semibold text-slate-900">
+                  <span class="text-xs">🏫</span> {{ rec.operating_unit }}
+                </span>
               </td>
 
               <!-- PPA & Account Code -->
@@ -306,17 +332,60 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useRecordsStore } from '@/stores/records'
 import RecordModal from '@/components/RecordModal.vue'
+import apiClient from '@/api/client'
 
 const authStore = useAuthStore()
 const recordsStore = useRecordsStore()
+const route = useRoute()
+const router = useRouter()
 
 const isModalOpen = ref(false)
 const selectedRecord = ref(null)
 const deleteCandidate = ref(null)
+const operatingUnits = ref([])
+
+const isSdoProper = (ou, div) => {
+  if (!ou) return false
+  if (div && ou === div) return true
+  return ou.toLowerCase().startsWith('division of')
+}
+
+const loadOperatingUnits = async () => {
+  try {
+    const res = await apiClient.get('/records/operating-units')
+    operatingUnits.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load operating units', err)
+  }
+}
+
+const syncRouteFilters = () => {
+  let changed = false
+  if (route.query.operating_unit) {
+    recordsStore.filters.operating_unit = String(route.query.operating_unit)
+    changed = true
+  }
+  if (route.query.search) {
+    recordsStore.filters.search = String(route.query.search)
+    changed = true
+  }
+  if (route.query.division) {
+    recordsStore.filters.division = String(route.query.division)
+    changed = true
+  }
+  return changed
+}
+
+const handleResetFilters = () => {
+  recordsStore.resetFilters()
+  // Clean URL query
+  router.replace({ path: '/records' })
+}
 
 let debounceTimer = null
 const handleFilterChange = () => {
@@ -356,8 +425,21 @@ const formatCurrency = (val) => {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0)
 }
 
-onMounted(() => {
-  recordsStore.fetchRecords()
+watch(
+  () => route.query,
+  () => {
+    syncRouteFilters()
+    recordsStore.filters.skip = 0
+    recordsStore.fetchRecords()
+  }
+)
+
+onMounted(async () => {
+  syncRouteFilters()
+  await Promise.all([
+    loadOperatingUnits(),
+    recordsStore.fetchRecords(),
+  ])
 })
 </script>
 

@@ -153,6 +153,18 @@ def create_record(
     return BMSRecordResponse.model_validate(record)
 
 
+@router.get("/operating-units", response_model=list[str])
+def list_operating_units(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Returns distinct operating units available under the user's role scope."""
+    query = db.query(BMSRecord.operating_unit).distinct()
+    query = apply_role_scope(query, current_user)
+    results = query.order_by(BMSRecord.operating_unit.asc()).all()
+    return [r[0] for r in results if r[0]]
+
+
 @router.get("/{id}", response_model=BMSRecordResponse)
 def get_record(
     id: str,

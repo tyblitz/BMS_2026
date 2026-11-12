@@ -222,7 +222,7 @@
                 </td>
                 <td class="px-4 py-3 text-center">
                   <router-link
-                    :to="{ path: '/records', query: { search: school.school_name } }"
+                    :to="{ path: '/records', query: { operating_unit: school.school_name } }"
                     class="px-2.5 py-1 bg-slate-100 hover:bg-deped-blue hover:text-white text-slate-700 font-semibold rounded text-[11px] transition"
                   >
                     View
