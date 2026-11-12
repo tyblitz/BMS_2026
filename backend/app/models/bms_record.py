@@ -61,6 +61,8 @@ class BMSRecord(Base, AuditMixin):
         Index("idx_school_active", "operating_unit", "is_deleted"),
         Index("idx_division_active", "division", "is_deleted"),
         Index("idx_region_active", "region", "is_deleted"),
+        Index("idx_region_div_active", "region", "division", "is_deleted"),
+        Index("idx_div_ou_active", "division", "operating_unit", "is_deleted"),
         Index("idx_financial_filter", "allotment_class", "account_code", "fund_source"),
     )
 

@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.models.user import User
 from app.services.excel_ingestion import ExcelIngestionService
 from app.api.deps import get_current_user
+from app.core.cache import clear_analytics_cache
 
 router = APIRouter(prefix="/upload", tags=["Upload & Ingestion"])
 
@@ -76,6 +77,9 @@ async def upload_temptable_files(
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
+
+    if overall_inserted > 0:
+        clear_analytics_cache()
 
     return {
         "files_processed": len(files),

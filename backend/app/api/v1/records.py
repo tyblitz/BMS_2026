@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.bms_record import BMSRecordCreate, BMSRecordUpdate, BMSRecordResponse
 from app.services.excel_ingestion import compute_row_hash
 from app.api.deps import get_current_user
+from app.core.cache import clear_analytics_cache
 
 router = APIRouter(prefix="/records", tags=["BMS Records"])
 
@@ -150,6 +151,7 @@ def create_record(
     db.add(record)
     db.commit()
     db.refresh(record)
+    clear_analytics_cache()
     return BMSRecordResponse.model_validate(record)
 
 
@@ -218,6 +220,7 @@ def update_record(
 
     db.commit()
     db.refresh(record)
+    clear_analytics_cache()
     return BMSRecordResponse.model_validate(record)
 
 
@@ -236,6 +239,7 @@ def delete_record(
 
     record.soft_delete(username=current_user.username)
     db.commit()
+    clear_analytics_cache()
     return {"status": "success", "message": f"Record {id} soft-deleted successfully"}
 
 
@@ -257,6 +261,7 @@ def restore_record(
     record.edited_by = current_user.username
     db.commit()
     db.refresh(record)
+    clear_analytics_cache()
     return BMSRecordResponse.model_validate(record)
 
 
