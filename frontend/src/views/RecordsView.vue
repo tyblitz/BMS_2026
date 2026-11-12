@@ -81,7 +81,7 @@
     <div class="bms-card p-4 bg-white">
       <div class="grid grid-cols-1 sm:grid-cols-6 gap-3">
         <!-- Search text -->
-        <div class="sm:col-span-2">
+        <div :class="divisions.length > 1 ? 'sm:col-span-1' : 'sm:col-span-2'">
           <input
             v-model="recordsStore.filters.search"
             @input="handleFilterChange"
@@ -89,6 +89,24 @@
             placeholder="Search particulars, PPA, account code, station..."
             class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-deped-blue focus:outline-none"
           />
+        </div>
+
+        <!-- Division Filter Dropdown (Region & Admin) -->
+        <div v-if="divisions.length > 1">
+          <select
+            v-model="recordsStore.filters.division"
+            @change="handleDivisionChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option value="">All Divisions</option>
+            <option
+              v-for="div in divisions"
+              :key="div"
+              :value="div"
+            >
+              {{ div }}
+            </option>
+          </select>
         </div>
 
         <!-- Operating Unit / School Dropdown -->
@@ -347,6 +365,7 @@ const router = useRouter()
 const isModalOpen = ref(false)
 const selectedRecord = ref(null)
 const deleteCandidate = ref(null)
+const divisions = ref([])
 const operatingUnits = ref([])
 
 const isSdoProper = (ou, div) => {
@@ -355,9 +374,22 @@ const isSdoProper = (ou, div) => {
   return ou.toLowerCase().startsWith('division of')
 }
 
+const loadDivisions = async () => {
+  try {
+    const res = await apiClient.get('/records/divisions')
+    divisions.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load divisions', err)
+  }
+}
+
 const loadOperatingUnits = async () => {
   try {
-    const res = await apiClient.get('/records/operating-units')
+    const params = {}
+    if (recordsStore.filters.division) {
+      params.division = recordsStore.filters.division
+    }
+    const res = await apiClient.get('/records/operating-units', { params })
     operatingUnits.value = res.data || []
   } catch (err) {
     console.error('Failed to load operating units', err)
@@ -365,26 +397,33 @@ const loadOperatingUnits = async () => {
 }
 
 const syncRouteFilters = () => {
-  let changed = false
-  if (route.query.operating_unit) {
-    recordsStore.filters.operating_unit = String(route.query.operating_unit)
-    changed = true
-  }
-  if (route.query.search) {
-    recordsStore.filters.search = String(route.query.search)
-    changed = true
-  }
-  if (route.query.division) {
-    recordsStore.filters.division = String(route.query.division)
-    changed = true
-  }
-  return changed
+  // CRITICAL: Always reset all filters to clean state first.
+  // This guarantees that clicking "Inspect", "View", or switching between dashboards
+  // never leaves stale school or division filters from a previous view.
+  recordsStore.filters.skip = 0
+  recordsStore.filters.limit = 25
+  recordsStore.filters.search = route.query.search ? String(route.query.search) : ''
+  recordsStore.filters.allotment_class = route.query.allotment_class ? String(route.query.allotment_class) : ''
+  recordsStore.filters.fund_source = route.query.fund_source ? String(route.query.fund_source) : ''
+  recordsStore.filters.account_code = route.query.account_code ? String(route.query.account_code) : ''
+  recordsStore.filters.operating_unit = route.query.operating_unit ? String(route.query.operating_unit) : ''
+  recordsStore.filters.division = route.query.division ? String(route.query.division) : ''
+  recordsStore.filters.region = route.query.region ? String(route.query.region) : ''
 }
 
-const handleResetFilters = () => {
+const handleDivisionChange = async () => {
+  // When division changes, reset school filter because the school belongs to previous division
+  recordsStore.filters.operating_unit = ''
+  recordsStore.filters.skip = 0
+  await loadOperatingUnits()
+  await recordsStore.fetchRecords()
+}
+
+const handleResetFilters = async () => {
   recordsStore.resetFilters()
   // Clean URL query
-  router.replace({ path: '/records' })
+  await router.replace({ path: '/records' })
+  await loadOperatingUnits()
 }
 
 let debounceTimer = null
@@ -427,9 +466,9 @@ const formatCurrency = (val) => {
 
 watch(
   () => route.query,
-  () => {
+  async () => {
     syncRouteFilters()
-    recordsStore.filters.skip = 0
+    await loadOperatingUnits()
     recordsStore.fetchRecords()
   }
 )
@@ -437,9 +476,10 @@ watch(
 onMounted(async () => {
   syncRouteFilters()
   await Promise.all([
+    loadDivisions(),
     loadOperatingUnits(),
-    recordsStore.fetchRecords(),
   ])
+  recordsStore.fetchRecords()
 })
 </script>
 

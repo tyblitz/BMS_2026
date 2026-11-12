@@ -224,7 +224,7 @@
                 </td>
                 <td class="px-4 py-3 text-center">
                   <router-link
-                    :to="{ path: '/records', query: { search: div.division } }"
+                    :to="{ path: '/records', query: { division: div.division } }"
                     class="px-2.5 py-1 bg-slate-100 hover:bg-deped-blue hover:text-white text-slate-700 font-semibold rounded text-[11px] transition"
                   >
                     Inspect

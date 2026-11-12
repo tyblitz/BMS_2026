@@ -24,3 +24,4 @@ def set_analytics_cache(key: str, data: Any, ttl_seconds: int = 120):
 def clear_analytics_cache():
     """Invalidates all cached analytics (e.g. after upload, edit, or delete)."""
     _CACHE.clear()
+
