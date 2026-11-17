@@ -56,6 +56,22 @@ def get_school_summary(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"School '{target_school}' is not within your division scope ({current_user.division}).",
                 )
+        # If regional, ensure the school requested belongs to their region
+        elif current_user.role == "region" and target_school:
+            school_in_reg = (
+                db.query(BMSRecord)
+                .filter(
+                    BMSRecord.is_deleted == False,
+                    BMSRecord.region == current_user.region,
+                    BMSRecord.operating_unit == target_school,
+                )
+                .first()
+            )
+            if not school_in_reg:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"School '{target_school}' is not within your regional scope ({current_user.region}).",
+                )
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
@@ -64,6 +80,23 @@ def get_school_summary(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A school operating unit name must be specified.",
         )
+
+    # Base query filters scoped strictly to authorized organization
+    filter_conditions = [
+        BMSRecord.is_deleted == False,
+        BMSRecord.operating_unit == target_school,
+    ]
+    if current_user.role == "school":
+        if current_user.division:
+            filter_conditions.append(BMSRecord.division == current_user.division)
+        if current_user.region:
+            filter_conditions.append(BMSRecord.region == current_user.region)
+    elif current_user.role == "sdo":
+        filter_conditions.append(BMSRecord.division == current_user.division)
+        if current_user.region:
+            filter_conditions.append(BMSRecord.region == current_user.region)
+    elif current_user.role == "region":
+        filter_conditions.append(BMSRecord.region == current_user.region)
 
     # Base query for this school
     query = db.query(
@@ -76,10 +109,7 @@ def get_school_summary(
         func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("sum_transfer_to"),
         func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("sum_obligations"),
         func.coalesce(func.sum(BMSRecord.disbursement), 0).label("sum_disbursement"),
-    ).filter(
-        BMSRecord.is_deleted == False,
-        BMSRecord.operating_unit == target_school,
-    )
+    ).filter(*filter_conditions)
 
     result = query.first()
 
@@ -215,6 +245,21 @@ def get_division_summary(
         target_division = current_user.division
     elif current_user.role in ["admin", "region"]:
         target_division = division_name or "Division of Caloocan"
+        if current_user.role == "region" and target_division:
+            div_in_reg = (
+                db.query(BMSRecord.id)
+                .filter(
+                    BMSRecord.is_deleted == False,
+                    BMSRecord.region == current_user.region,
+                    BMSRecord.division == target_division,
+                )
+                .first()
+            )
+            if not div_in_reg:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Division '{target_division}' is not within your regional scope ({current_user.region}).",
+                )
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -227,6 +272,13 @@ def get_division_summary(
             detail="A division name must be specified.",
         )
 
+    div_filters = [
+        BMSRecord.is_deleted == False,
+        BMSRecord.division == target_division,
+    ]
+    if current_user.role in ["sdo", "region"] and current_user.region:
+        div_filters.append(BMSRecord.region == current_user.region)
+
     # 1. Division Totals
     div_query = db.query(
         func.count(BMSRecord.id).label("total_records"),
@@ -238,10 +290,7 @@ def get_division_summary(
         func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("sum_transfer_to"),
         func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("sum_obligations"),
         func.coalesce(func.sum(BMSRecord.disbursement), 0).label("sum_disbursement"),
-    ).filter(
-        BMSRecord.is_deleted == False,
-        BMSRecord.division == target_division,
-    ).first()
+    ).filter(*div_filters).first()
 
     total_records = div_query.total_records if div_query else 0
     appro = to_decimal(div_query.sum_appro if div_query else 0)

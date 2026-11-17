@@ -25,17 +25,19 @@ def initialize_database():
     try:
         admin_user = session.query(User).filter(User.username == "admin").first()
         if not admin_user:
+            import os
+            initial_password = os.getenv("INITIAL_ADMIN_PASSWORD", "Admin123!")
             admin_user = User(
                 username="admin",
                 email="admin@deped.gov.ph",
-                hashed_password=get_password_hash("Admin123!"),
+                hashed_password=get_password_hash(initial_password),
                 role="admin",
                 is_active=True,
                 created_by="system_init"
             )
             session.add(admin_user)
             session.commit()
-            print("✓ Default SuperAdmin account seeded: username='admin', password='Admin123!'")
+            print("✓ Default SuperAdmin account seeded (username='admin'). Set INITIAL_ADMIN_PASSWORD to customize.")
         else:
             print("✓ Admin account already exists.")
     finally:

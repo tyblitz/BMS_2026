@@ -27,8 +27,8 @@ from app.services.excel_ingestion import compute_row_hash
 from app.services.calculations import to_decimal
 
 EXCEL_FILE = "CONSO tempTable as of September 30, 2026.xlsx"
-DEFAULT_PASSWORD = "Password123!"
-ADMIN_PASSWORD = "Admin123!"
+DEFAULT_PASSWORD = os.getenv("SEED_DEFAULT_PASSWORD", "Password123!")
+ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "Admin123!")
 
 SDO_MAP = {
     "Division of Caloocan": "sdo_caloocan",
@@ -62,6 +62,13 @@ def run_population():
     print("=" * 70)
     print("  DepEd NCR BURS — Database Reset & Population Engine")
     print("=" * 70)
+
+    # Production Safeguard against accidental drop
+    if os.getenv("ALLOW_DATABASE_RESET") != "true":
+        print("\n[SAFETY ABORT] 'populate_conso.py' drops and recreates all tables!")
+        print("To run this script, set environment variable ALLOW_DATABASE_RESET=true")
+        print("Example (PowerShell): $env:ALLOW_DATABASE_RESET='true'; python populate_conso.py\n")
+        return
 
     # 1. Reset Database Schema
     print("Step 1: Resetting database tables...")

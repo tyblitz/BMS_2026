@@ -49,9 +49,15 @@ async def login(
             detail="Username and password are required.",
         )
 
-    # Trim any accidental whitespace
+    # Normalize username; preserve password bytes exactly
     username = str(username).strip()
-    password = str(password).strip()
+    password = str(password)
+
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password cannot exceed 72 bytes.",
+        )
 
     user = db.query(User).filter(User.username == username, User.is_deleted == False).first()
     if not user or not verify_password(password, user.hashed_password):

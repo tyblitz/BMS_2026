@@ -1,5 +1,6 @@
 import os
 import json
+import secrets
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,6 +8,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 CONFIG_FILE = DATA_DIR / "db_config.json"
+SECRET_KEY_FILE = DATA_DIR / ".jwt_secret"
+
+
+def get_or_create_secret_key() -> str:
+    env_secret = os.getenv("SECRET_KEY")
+    if env_secret and env_secret.strip():
+        return env_secret.strip()
+    if SECRET_KEY_FILE.exists():
+        try:
+            stored = SECRET_KEY_FILE.read_text(encoding="utf-8").strip()
+            if stored:
+                return stored
+        except Exception:
+            pass
+    new_secret = secrets.token_hex(32)
+    try:
+        SECRET_KEY_FILE.write_text(new_secret, encoding="utf-8")
+    except Exception:
+        pass
+    return new_secret
 
 
 class Settings(BaseSettings):
@@ -15,7 +36,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "bms-secret-key-change-in-production-2026")
+    SECRET_KEY: str = get_or_create_secret_key()
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
     

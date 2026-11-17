@@ -54,11 +54,6 @@
           </span>
         </button>
       </form>
-
-      <!-- Roles hint -->
-      <div class="mt-8 pt-5 border-t border-slate-100 text-xs text-slate-400 text-center">
-        Default administrative credentials: <span class="font-mono text-slate-600 font-medium">admin</span> / <span class="font-mono text-slate-600 font-medium">Admin123!</span>
-      </div>
     </div>
   </div>
 </template>
@@ -72,8 +67,8 @@ import { getHomeRouteForRole } from '@/router'
 const authStore = useAuthStore()
 const router = useRouter()
 
-const username = ref('admin')
-const password = ref('Admin123!')
+const username = ref('')
+const password = ref('')
 
 const handleSubmit = async () => {
   const success = await authStore.login(username.value, password.value)

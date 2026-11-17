@@ -7,8 +7,11 @@ from app.core.config import settings
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
+        pwd_bytes = plain_password.encode("utf-8")
+        if len(pwd_bytes) > 72:
+            return False
         return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
+            pwd_bytes,
             hashed_password.encode("utf-8")
         )
     except Exception:
@@ -16,8 +19,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    # bcrypt max length is 72 bytes
-    pwd_bytes = password.encode("utf-8")[:72]
+    pwd_bytes = password.encode("utf-8")
+    if len(pwd_bytes) > 72:
+        raise ValueError("Password exceeds maximum bcrypt length of 72 bytes")
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 

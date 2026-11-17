@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await apiClient.post('/auth/login', {
           username: String(username).trim(),
-          password: String(password).trim(),
+          password: String(password),
         })
 
         this.token = response.data.access_token

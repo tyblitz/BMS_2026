@@ -15,7 +15,7 @@ router = APIRouter(prefix="/records", tags=["BMS Records"])
 
 
 def apply_role_scope(query, current_user: User):
-    """Enforces backend-level data isolation based on user role."""
+    """Enforces backend-level data isolation based on hierarchical user role."""
     query = query.filter(BMSRecord.is_deleted == False)
 
     if current_user.role == "admin":
@@ -23,11 +23,19 @@ def apply_role_scope(query, current_user: User):
     elif current_user.role == "school":
         if not current_user.school_name:
             raise HTTPException(status_code=400, detail="User account missing assigned school_name")
-        return query.filter(BMSRecord.operating_unit == current_user.school_name)
+        filters = [BMSRecord.operating_unit == current_user.school_name]
+        if current_user.division:
+            filters.append(BMSRecord.division == current_user.division)
+        if current_user.region:
+            filters.append(BMSRecord.region == current_user.region)
+        return query.filter(*filters)
     elif current_user.role == "sdo":
         if not current_user.division:
             raise HTTPException(status_code=400, detail="User account missing assigned division")
-        return query.filter(BMSRecord.division == current_user.division)
+        filters = [BMSRecord.division == current_user.division]
+        if current_user.region:
+            filters.append(BMSRecord.region == current_user.region)
+        return query.filter(*filters)
     elif current_user.role == "region":
         if not current_user.region:
             raise HTTPException(status_code=400, detail="User account missing assigned region")
@@ -98,17 +106,34 @@ def create_record(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Enforce scope check on creation
-    if current_user.role == "school" and payload.operating_unit != current_user.school_name:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"School users can only create records for their assigned school: '{current_user.school_name}'"
-        )
-    elif current_user.role == "sdo" and payload.division != current_user.division:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"SDO users can only create records for their assigned division: '{current_user.division}'"
-        )
+    # Enforce hierarchical scope check on creation
+    if current_user.role == "school":
+        if payload.operating_unit != current_user.school_name:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"School users can only create records for their assigned school: '{current_user.school_name}'"
+            )
+        if current_user.division and payload.division != current_user.division:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"School users can only create records for their assigned division: '{current_user.division}'"
+            )
+        if current_user.region and payload.region != current_user.region:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"School users can only create records for their assigned region: '{current_user.region}'"
+            )
+    elif current_user.role == "sdo":
+        if payload.division != current_user.division:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"SDO users can only create records for their assigned division: '{current_user.division}'"
+            )
+        if current_user.region and payload.region != current_user.region:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"SDO users can only create records for their assigned region: '{current_user.region}'"
+            )
     elif current_user.role == "region" and payload.region != current_user.region:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -210,6 +235,24 @@ def update_record(
         raise HTTPException(status_code=404, detail="Record not found or outside authorized scope")
 
     update_data = payload.model_dump(exclude_unset=True)
+
+    # Validate that updating organizational ownership does not violate user's role scope
+    if current_user.role == "school":
+        if "operating_unit" in update_data and update_data["operating_unit"] != current_user.school_name:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="School users cannot change record operating_unit.")
+        if "division" in update_data and current_user.division and update_data["division"] != current_user.division:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="School users cannot change record division.")
+        if "region" in update_data and current_user.region and update_data["region"] != current_user.region:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="School users cannot change record region.")
+    elif current_user.role == "sdo":
+        if "division" in update_data and update_data["division"] != current_user.division:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="SDO users cannot change record division.")
+        if "region" in update_data and current_user.region and update_data["region"] != current_user.region:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="SDO users cannot change record region.")
+    elif current_user.role == "region":
+        if "region" in update_data and update_data["region"] != current_user.region:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Regional users cannot change record region.")
+
     for field, val in update_data.items():
         setattr(record, field, val)
 
@@ -264,10 +307,28 @@ def restore_record(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Restores a soft-deleted record back to active status."""
-    record = db.query(BMSRecord).filter(BMSRecord.id == id).first()
-    if not record or not record.is_deleted:
-        raise HTTPException(status_code=404, detail="Archived record not found.")
+    """Restores a soft-deleted record back to active status with strict role scope checking."""
+    query = db.query(BMSRecord).filter(BMSRecord.id == id, BMSRecord.is_deleted == True)
+
+    # Enforce role scope on restore
+    if current_user.role == "school":
+        filters = [BMSRecord.operating_unit == current_user.school_name]
+        if current_user.division:
+            filters.append(BMSRecord.division == current_user.division)
+        if current_user.region:
+            filters.append(BMSRecord.region == current_user.region)
+        query = query.filter(*filters)
+    elif current_user.role == "sdo":
+        filters = [BMSRecord.division == current_user.division]
+        if current_user.region:
+            filters.append(BMSRecord.region == current_user.region)
+        query = query.filter(*filters)
+    elif current_user.role == "region":
+        query = query.filter(BMSRecord.region == current_user.region)
+
+    record = query.first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Archived record not found or outside authorized scope.")
 
     record.is_deleted = False
     record.deleted_on = None
