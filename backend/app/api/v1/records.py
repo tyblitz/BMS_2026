@@ -1,3 +1,5 @@
+import json
+import re
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -6,6 +8,7 @@ from sqlalchemy import or_
 from app.core.database import get_db
 from app.models.bms_record import BMSRecord
 from app.models.user import User
+from app.models.record_audit_log import RecordAuditLog
 from app.schemas.bms_record import BMSRecordCreate, BMSRecordUpdate, BMSRecordResponse
 from app.services.excel_ingestion import compute_row_hash
 from app.api.deps import get_current_user
@@ -167,6 +170,17 @@ def create_record(
             detail="A record with identical transaction values already exists."
         )
 
+    # Auto-extract PPA code and description
+    if "ppa_control" in row_data and row_data["ppa_control"]:
+        raw_ppa = str(row_data["ppa_control"]).strip()
+        m = re.match(r"^(PPA\d+)\s*-\s*(.+)$", raw_ppa)
+        if m:
+            row_data["ppa_code"] = m.group(1)
+            row_data["ppa_description"] = m.group(2)
+        else:
+            row_data["ppa_code"] = raw_ppa[:20]
+            row_data["ppa_description"] = raw_ppa
+
     record = BMSRecord(
         **row_data,
         row_hash=row_hash,
@@ -174,6 +188,18 @@ def create_record(
         is_deleted=False
     )
     db.add(record)
+    db.flush()
+
+    # Immutable audit history
+    audit_entry = RecordAuditLog(
+        record_id=record.id,
+        action="CREATE",
+        changed_by=current_user.username,
+        new_values=json.dumps(row_data, default=str),
+        reason="Manual record creation"
+    )
+    db.add(audit_entry)
+
     db.commit()
     db.refresh(record)
     clear_analytics_cache()
@@ -253,8 +279,20 @@ def update_record(
         if "region" in update_data and update_data["region"] != current_user.region:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Regional users cannot change record region.")
 
+    old_values = {f: getattr(record, f) for f in update_data.keys()}
     for field, val in update_data.items():
         setattr(record, field, val)
+
+    # Auto-update PPA code/description if ppa_control was updated
+    if "ppa_control" in update_data and update_data["ppa_control"]:
+        raw_ppa = str(update_data["ppa_control"]).strip()
+        m = re.match(r"^(PPA\d+)\s*-\s*(.+)$", raw_ppa)
+        if m:
+            record.ppa_code = m.group(1)
+            record.ppa_description = m.group(2)
+        else:
+            record.ppa_code = raw_ppa[:20]
+            record.ppa_description = raw_ppa
 
     # Recompute row_hash with updated values
     hash_input = {
@@ -276,6 +314,17 @@ def update_record(
     record.edited_on = datetime.now(timezone.utc)
     record.edited_by = current_user.username
 
+    # Immutable audit history
+    audit_entry = RecordAuditLog(
+        record_id=record.id,
+        action="UPDATE",
+        changed_by=current_user.username,
+        old_values=json.dumps(old_values, default=str),
+        new_values=json.dumps(update_data, default=str),
+        reason="Manual record update"
+    )
+    db.add(audit_entry)
+
     db.commit()
     db.refresh(record)
     clear_analytics_cache()
@@ -296,6 +345,18 @@ def delete_record(
         raise HTTPException(status_code=404, detail="Record not found or outside authorized scope")
 
     record.soft_delete(username=current_user.username)
+
+    # Immutable audit history
+    audit_entry = RecordAuditLog(
+        record_id=record.id,
+        action="DELETE",
+        changed_by=current_user.username,
+        old_values=json.dumps({"is_deleted": False}, default=str),
+        new_values=json.dumps({"is_deleted": True}, default=str),
+        reason="Soft deletion"
+    )
+    db.add(audit_entry)
+
     db.commit()
     clear_analytics_cache()
     return {"status": "success", "message": f"Record {id} soft-deleted successfully"}
@@ -335,6 +396,18 @@ def restore_record(
     record.deleted_by = None
     record.edited_on = datetime.now(timezone.utc)
     record.edited_by = current_user.username
+
+    # Immutable audit history
+    audit_entry = RecordAuditLog(
+        record_id=record.id,
+        action="RESTORE",
+        changed_by=current_user.username,
+        old_values=json.dumps({"is_deleted": True}, default=str),
+        new_values=json.dumps({"is_deleted": False}, default=str),
+        reason="Restored archived record"
+    )
+    db.add(audit_entry)
+
     db.commit()
     db.refresh(record)
     clear_analytics_cache()

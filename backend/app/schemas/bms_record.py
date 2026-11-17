@@ -7,6 +7,8 @@ from app.services.calculations import calculate_balances
 
 class BMSRecordBase(BaseModel):
     ppa_control: Optional[str] = None
+    ppa_code: Optional[str] = None
+    ppa_description: Optional[str] = None
     appropriation_type: Optional[str] = None
     allotment_period: Optional[str] = None
     allotment_class: Optional[str] = None

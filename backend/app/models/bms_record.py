@@ -14,11 +14,13 @@ class BMSRecord(Base, AuditMixin):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
-    # Deterministic SHA-256 deduplication fingerprint
-    row_hash = Column(String(64), unique=True, nullable=False, index=True)
+    # Deterministic SHA-256 deduplication fingerprint (Non-unique to prevent collapsing legitimate distinct lines)
+    row_hash = Column(String(64), unique=False, nullable=False, index=True)
 
-    # 28 Raw Business Fields
+    # 28 Raw Business Fields + Normalized PPA structure
     ppa_control = Column(String(255), nullable=True, index=True)       # A: PPAControl
+    ppa_code = Column(String(20), nullable=True, index=True)           # Normalized PPA Code (e.g. PPA350)
+    ppa_description = Column(String(255), nullable=True)               # Normalized PPA Description
     appropriation_type = Column(String(100), nullable=True)            # B: AppropriationType
     allotment_period = Column(String(100), nullable=True)              # C: AllotmentPeriod
     allotment_class = Column(String(50), nullable=True, index=True)    # D: AllotmentClass (PS, MOOE, CO)
@@ -64,5 +66,11 @@ class BMSRecord(Base, AuditMixin):
         Index("idx_region_div_active", "region", "division", "is_deleted"),
         Index("idx_div_ou_active", "division", "operating_unit", "is_deleted"),
         Index("idx_financial_filter", "allotment_class", "account_code", "fund_source"),
+        # Composite pagination indexes with created_on for sub-millisecond retrieval
+        Index("idx_school_page", "operating_unit", "is_deleted", "created_on"),
+        Index("idx_division_page", "division", "is_deleted", "created_on"),
+        Index("idx_region_page", "region", "is_deleted", "created_on"),
+        Index("idx_admin_page", "is_deleted", "created_on"),
+        Index("idx_ppa_code_active", "ppa_code", "is_deleted"),
     )
 
