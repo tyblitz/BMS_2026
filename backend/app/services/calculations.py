@@ -2,12 +2,22 @@ from decimal import Decimal
 from typing import Any
 
 
-def to_decimal(val: Any) -> Decimal:
-    if val is None or val == "" or val == "NA":
+def to_decimal(val: Any, strict: bool = False) -> Decimal:
+    if val is None:
         return Decimal("0.00")
-    try:
+    if isinstance(val, Decimal):
+        return val
+    if isinstance(val, (int, float)):
         return Decimal(str(val))
-    except Exception:
+    s_val = str(val).strip()
+    if s_val in ("", "NA", "N/A", "-", "--", "None", "null"):
+        return Decimal("0.00")
+    cleaned = s_val.replace(",", "").replace("₱", "").replace("$", "").strip()
+    try:
+        return Decimal(cleaned)
+    except Exception as e:
+        if strict:
+            raise ValueError(f"Invalid decimal value: {val!r}") from e
         return Decimal("0.00")
 
 

@@ -22,6 +22,9 @@ def export_consolidated_excel(
     allotment_class: Optional[str] = None,
     fund_source: Optional[str] = None,
     account_code: Optional[str] = None,
+    appropriation_type: Optional[str] = None,
+    allotment_period: Optional[str] = None,
+    ppa_code: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -40,8 +43,15 @@ def export_consolidated_excel(
         query = query.filter(BMSRecord.fund_source == fund_source)
     if account_code:
         query = query.filter(BMSRecord.account_code == account_code)
+    if appropriation_type:
+        query = query.filter(BMSRecord.appropriation_type == appropriation_type)
+    if allotment_period:
+        query = query.filter(BMSRecord.allotment_period == allotment_period)
+    if ppa_code:
+        query = query.filter(BMSRecord.ppa_code == ppa_code)
 
-    records = query.order_by(BMSRecord.operating_unit, BMSRecord.date_bms).all()
+    # Use yield_per for memory-safe chunked streaming
+    records = query.order_by(BMSRecord.operating_unit, BMSRecord.date_bms).yield_per(1000)
 
     output = io.BytesIO()
     ExcelExportService.export_to_stream(records, output)

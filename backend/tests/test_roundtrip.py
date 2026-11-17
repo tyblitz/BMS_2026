@@ -42,21 +42,7 @@ def test_end_to_end_roundtrip_ms_access_compatibility():
         rec.disbursement = Decimal("10250.50")
         rec.edited_by = "roundtrip_tester"
         # Update row_hash to reflect modified transaction numbers
-        hash_input = {
-            "OperatingUnit": rec.operating_unit,
-            "DateBMS": rec.date_bms,
-            "AccountCode": rec.account_code,
-            "UACSPAPCODE": rec.uacs_pap_code,
-            "Particulars": rec.particulars,
-            "ObligationsIncurred": rec.obligations_incurred,
-            "Disbursement": rec.disbursement,
-            "Appropriations": rec.appropriations,
-            "Allotment": rec.allotment,
-            "FundSource": rec.fund_source,
-            "TransferTo": rec.transfer_to,
-            "TransferFrom": rec.transfer_from,
-            "DVAmount": rec.dv_amount
-        }
+        hash_input = {c.name: getattr(rec, c.name) for c in rec.__table__.columns}
         rec.row_hash = compute_row_hash(hash_input)
         session.commit()
 

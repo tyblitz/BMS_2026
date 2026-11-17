@@ -144,23 +144,7 @@ def create_record(
         )
 
     row_data = payload.model_dump()
-    # Normalize keys for row_hash calculation
-    hash_input = {
-        "OperatingUnit": row_data.get("operating_unit"),
-        "DateBMS": row_data.get("date_bms"),
-        "AccountCode": row_data.get("account_code"),
-        "UACSPAPCODE": row_data.get("uacs_pap_code"),
-        "Particulars": row_data.get("particulars"),
-        "ObligationsIncurred": row_data.get("obligations_incurred"),
-        "Disbursement": row_data.get("disbursement"),
-        "Appropriations": row_data.get("appropriations"),
-        "Allotment": row_data.get("allotment"),
-        "FundSource": row_data.get("fund_source"),
-        "TransferTo": row_data.get("transfer_to"),
-        "TransferFrom": row_data.get("transfer_from"),
-        "DVAmount": row_data.get("dv_amount")
-    }
-    row_hash = compute_row_hash(hash_input)
+    row_hash = compute_row_hash(row_data)
 
     # Check for existing duplicate
     existing = db.query(BMSRecord).filter(BMSRecord.row_hash == row_hash, BMSRecord.is_deleted == False).first()
