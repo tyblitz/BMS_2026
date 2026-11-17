@@ -58,6 +58,9 @@ def list_records(
     account_code: Optional[str] = None,
     fund_source: Optional[str] = None,
     ppa_control: Optional[str] = None,
+    ppa_code: Optional[str] = None,
+    appropriation_type: Optional[str] = None,
+    allotment_period: Optional[str] = None,
     search: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -78,17 +81,25 @@ def list_records(
         query = query.filter(BMSRecord.account_code == account_code)
     if fund_source:
         query = query.filter(BMSRecord.fund_source == fund_source)
+    if ppa_code:
+        query = query.filter(BMSRecord.ppa_code == ppa_code)
     if ppa_control:
         query = query.filter(BMSRecord.ppa_control.ilike(f"%{ppa_control}%"))
+    if appropriation_type:
+        query = query.filter(BMSRecord.appropriation_type == appropriation_type)
+    if allotment_period:
+        query = query.filter(BMSRecord.allotment_period == allotment_period)
     if search:
         s = f"%{search}%"
         query = query.filter(
             or_(
                 BMSRecord.particulars.ilike(s),
                 BMSRecord.ppa_control.ilike(s),
+                BMSRecord.ppa_code.ilike(s),
                 BMSRecord.account_code.ilike(s),
                 BMSRecord.operating_unit.ilike(s),
-                BMSRecord.uacs_pap_code.ilike(s)
+                BMSRecord.uacs_pap_code.ilike(s),
+                BMSRecord.legal_basis.ilike(s)
             )
         )
 

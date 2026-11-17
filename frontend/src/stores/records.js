@@ -7,6 +7,15 @@ export const useRecordsStore = defineStore('records', {
     total: 0,
     loading: false,
     error: null,
+    kpis: {
+      totalAllotment: 0,
+      totalObligations: 0,
+      totalDisbursements: 0,
+      totalUnobligated: 0,
+      totalUnpaid: 0,
+      totalAdjustedAppro: 0,
+      unreleased: 0,
+    },
     filters: {
       skip: 0,
       limit: 25,
@@ -17,6 +26,9 @@ export const useRecordsStore = defineStore('records', {
       operating_unit: '',
       division: '',
       region: '',
+      appropriation_type: '',
+      allotment_period: '',
+      ppa_code: '',
     },
   }),
 
@@ -24,30 +36,8 @@ export const useRecordsStore = defineStore('records', {
     totalPages: (state) => Math.ceil(state.total / state.filters.limit) || 1,
     currentPage: (state) => Math.floor(state.filters.skip / state.filters.limit) + 1,
     
-    // Aggregated financial metrics for the current view
-    summaryKPIs: (state) => {
-      let totalAllotment = 0
-      let totalObligations = 0
-      let totalDisbursements = 0
-      let totalUnobligated = 0
-      let totalUnpaid = 0
-
-      for (const r of state.records) {
-        totalAllotment += parseFloat(r.total_adjusted_allotment || r.allotment || 0)
-        totalObligations += parseFloat(r.obligations_incurred || 0)
-        totalDisbursements += parseFloat(r.disbursement || 0)
-        totalUnobligated += parseFloat(r.unobligated || 0)
-        totalUnpaid += parseFloat(r.unpaid || 0)
-      }
-
-      return {
-        totalAllotment,
-        totalObligations,
-        totalDisbursements,
-        totalUnobligated,
-        totalUnpaid,
-      }
-    },
+    // Return scope-wide KPIs fetched from database aggregation
+    summaryKPIs: (state) => state.kpis,
   },
 
   actions: {
@@ -63,9 +53,33 @@ export const useRecordsStore = defineStore('records', {
           }
         })
 
-        const response = await apiClient.get('/records', { params })
-        this.records = response.data.items || []
-        this.total = response.data.total || 0
+        // Fetch paginated records and scope-wide KPI summary concurrently
+        const summaryParams = { ...params }
+        delete summaryParams.skip
+        delete summaryParams.limit
+
+        const [recordsRes, summaryRes] = await Promise.all([
+          apiClient.get('/records', { params }),
+          apiClient.get('/analytics/records-summary', { params: summaryParams }).catch((e) => {
+            console.warn('Could not fetch records summary:', e)
+            return null
+          })
+        ])
+
+        this.records = recordsRes.data.items || []
+        this.total = recordsRes.data.total || 0
+
+        if (summaryRes?.data) {
+          this.kpis = {
+            totalAllotment: summaryRes.data.total_allotment || 0,
+            totalObligations: summaryRes.data.total_obligations || 0,
+            totalDisbursements: summaryRes.data.total_disbursements || 0,
+            totalUnobligated: summaryRes.data.total_unobligated || 0,
+            totalUnpaid: summaryRes.data.total_unpaid || 0,
+            totalAdjustedAppro: summaryRes.data.total_adjusted_appro || 0,
+            unreleased: summaryRes.data.unreleased || 0,
+          }
+        }
       } catch (err) {
         this.error = err.response?.data?.detail || 'Failed to fetch records.'
       } finally {
@@ -95,6 +109,9 @@ export const useRecordsStore = defineStore('records', {
         operating_unit: '',
         division: '',
         region: '',
+        appropriation_type: '',
+        allotment_period: '',
+        ppa_code: '',
       }
       this.fetchRecords()
     },
@@ -139,4 +156,3 @@ export const useRecordsStore = defineStore('records', {
     },
   },
 })
-

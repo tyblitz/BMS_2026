@@ -13,7 +13,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 @router.get("", response_model=dict)
 def list_users(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     role: Optional[str] = None,
     search: Optional[str] = None,
     current_user: User = Depends(require_role("admin")),
@@ -31,6 +31,8 @@ def list_users(
 
     return {
         "total": total,
+        "skip": skip,
+        "limit": limit,
         "items": [UserResponse.model_validate(u) for u in items]
     }
 

@@ -2,13 +2,14 @@ from decimal import Decimal
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.bms_record import BMSRecord
 from app.services.calculations import calculate_balances
 from app.core.cache import get_analytics_cache, set_analytics_cache
+from app.api.v1.records import apply_role_scope
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & Summaries"])
 
@@ -668,4 +669,107 @@ def get_admin_summary(
             "unpaid_balance": float(unpaid),
             "utilization_rate": utilization_rate,
         },
+    }
+
+
+@router.get("/records-summary")
+def get_records_summary(
+    operating_unit: Optional[str] = None,
+    division: Optional[str] = None,
+    region: Optional[str] = None,
+    allotment_class: Optional[str] = None,
+    account_code: Optional[str] = None,
+    fund_source: Optional[str] = None,
+    ppa_control: Optional[str] = None,
+    ppa_code: Optional[str] = None,
+    appropriation_type: Optional[str] = None,
+    allotment_period: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Computes scope-wide aggregated financial KPIs matching current active record filters.
+    Runs entirely within SQL aggregation across active records, resolving frontend page-limited totals.
+    """
+    query = db.query(
+        func.count(BMSRecord.id).label("record_count"),
+        func.coalesce(func.sum(BMSRecord.appropriations), 0).label("total_appro"),
+        func.coalesce(func.sum(BMSRecord.appro_adjust), 0).label("total_appro_adj"),
+        func.coalesce(func.sum(BMSRecord.allotment), 0).label("total_allot"),
+        func.coalesce(func.sum(BMSRecord.realignment), 0).label("total_realign"),
+        func.coalesce(func.sum(BMSRecord.transfer_from), 0).label("total_trans_from"),
+        func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("total_trans_to"),
+        func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("total_obli"),
+        func.coalesce(func.sum(BMSRecord.disbursement), 0).label("total_disb"),
+    ).filter(BMSRecord.is_deleted == False)
+
+    query = apply_role_scope(query, current_user)
+
+    if operating_unit:
+        query = query.filter(BMSRecord.operating_unit == operating_unit)
+    if division:
+        query = query.filter(BMSRecord.division == division)
+    if region:
+        query = query.filter(BMSRecord.region == region)
+    if allotment_class:
+        query = query.filter(BMSRecord.allotment_class == allotment_class)
+    if account_code:
+        query = query.filter(BMSRecord.account_code == account_code)
+    if fund_source:
+        query = query.filter(BMSRecord.fund_source == fund_source)
+    if ppa_code:
+        query = query.filter(BMSRecord.ppa_code == ppa_code)
+    if ppa_control:
+        query = query.filter(BMSRecord.ppa_control.ilike(f"%{ppa_control}%"))
+    if appropriation_type:
+        query = query.filter(BMSRecord.appropriation_type == appropriation_type)
+    if allotment_period:
+        query = query.filter(BMSRecord.allotment_period == allotment_period)
+    if search:
+        s = f"%{search}%"
+        query = query.filter(
+            or_(
+                BMSRecord.particulars.ilike(s),
+                BMSRecord.ppa_control.ilike(s),
+                BMSRecord.ppa_code.ilike(s),
+                BMSRecord.account_code.ilike(s),
+                BMSRecord.operating_unit.ilike(s),
+                BMSRecord.uacs_pap_code.ilike(s),
+                BMSRecord.legal_basis.ilike(s),
+            )
+        )
+
+    res = query.first()
+
+    appro = Decimal(str(res.total_appro or 0))
+    appro_adj = Decimal(str(res.total_appro_adj or 0))
+    allot = Decimal(str(res.total_allot or 0))
+    realign = Decimal(str(res.total_realign or 0))
+    trans_from = Decimal(str(res.total_trans_from or 0))
+    trans_to = Decimal(str(res.total_trans_to or 0))
+    obli = Decimal(str(res.total_obli or 0))
+    disb = Decimal(str(res.total_disb or 0))
+
+    balances = calculate_balances(
+        appropriations=appro,
+        appro_adjust=appro_adj,
+        allotment=allot,
+        realignment=realign,
+        transfer_from=trans_from,
+        transfer_to=trans_to,
+        obligations_incurred=obli,
+        disbursement=disb
+    )
+
+    return {
+        "record_count": res.record_count or 0,
+        "total_allotment": float(balances["total_adjusted_allotment"]),
+        "total_obligations": float(obli),
+        "total_disbursements": float(disb),
+        "total_unobligated": float(balances["unobligated"]),
+        "total_unpaid": float(balances["unpaid"]),
+        "total_adjusted_appro": float(balances["total_adjusted_appro"]),
+        "total_adjusted_allotment": float(balances["total_adjusted_allotment"]),
+        "unreleased": float(balances["unreleased"]),
     }

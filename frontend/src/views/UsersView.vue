@@ -17,6 +17,48 @@
       </button>
     </div>
 
+    <!-- Filter Bar -->
+    <div class="bms-card p-4 bg-white">
+      <div class="flex flex-col sm:flex-row items-center gap-3">
+        <div class="flex-1 w-full">
+          <input
+            v-model="searchQuery"
+            @input="handleSearch"
+            type="text"
+            placeholder="Search username, school, or division..."
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          />
+        </div>
+
+        <div class="w-full sm:w-48">
+          <select
+            v-model="roleFilter"
+            @change="handleFilterChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option value="">All Roles</option>
+            <option value="school">School (Station)</option>
+            <option value="sdo">SDO (Division)</option>
+            <option value="region">Regional Office</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+
+        <div class="w-full sm:w-32">
+          <select
+            v-model="limit"
+            @change="handleLimitChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option :value="25">25 per page</option>
+            <option :value="50">50 per page</option>
+            <option :value="100">100 per page</option>
+            <option :value="250">250 per page</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- Users Table Card -->
     <div class="bms-card bg-white overflow-hidden">
       <!-- Loading indicator -->
@@ -110,6 +152,33 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination Footer -->
+      <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div>
+          Showing <span class="font-bold text-slate-800">{{ users.length }}</span> of <span class="font-bold text-slate-800">{{ total }}</span> user accounts
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button
+            :disabled="currentPage <= 1"
+            @click="setPage(currentPage - 1)"
+            class="px-3 py-1.5 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition"
+          >
+            Previous
+          </button>
+          <span class="px-2 text-xs font-semibold text-slate-700">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
+          <button
+            :disabled="currentPage >= totalPages"
+            @click="setPage(currentPage + 1)"
+            class="px-3 py-1.5 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- User Modal (Create / Edit) -->
@@ -201,14 +270,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiClient from '@/api/client'
 
 const users = ref([])
+const total = ref(0)
 const loading = ref(false)
 const isModalOpen = ref(false)
 const isEdit = ref(false)
 const selectedUser = ref(null)
+
+const searchQuery = ref('')
+const roleFilter = ref('')
+const limit = ref(50)
+const skip = ref(0)
+
+const currentPage = computed(() => Math.floor(skip.value / limit.value) + 1)
+const totalPages = computed(() => Math.ceil(total.value / limit.value) || 1)
+
+let searchTimeout = null
 
 const defaultForm = () => ({
   username: '',
@@ -226,13 +306,44 @@ const form = ref(defaultForm())
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const res = await apiClient.get('/users')
+    const params = {
+      skip: skip.value,
+      limit: limit.value,
+    }
+    if (searchQuery.value) params.search = searchQuery.value
+    if (roleFilter.value) params.role = roleFilter.value
+
+    const res = await apiClient.get('/users', { params })
     users.value = res.data.items || []
+    total.value = res.data.total || 0
   } catch (err) {
     console.error(err)
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    skip.value = 0
+    fetchUsers()
+  }, 300)
+}
+
+const handleFilterChange = () => {
+  skip.value = 0
+  fetchUsers()
+}
+
+const handleLimitChange = () => {
+  skip.value = 0
+  fetchUsers()
+}
+
+const setPage = (page) => {
+  skip.value = (page - 1) * limit.value
+  fetchUsers()
 }
 
 const openCreateModal = () => {
@@ -278,4 +389,3 @@ onMounted(() => {
   fetchUsers()
 })
 </script>
-
