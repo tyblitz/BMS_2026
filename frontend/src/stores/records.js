@@ -154,5 +154,27 @@ export const useRecordsStore = defineStore('records', {
       link.click()
       document.body.removeChild(link)
     },
+
+    async exportPpaSummaryExcel() {
+      const params = { ...this.filters }
+      delete params.skip
+      delete params.limit
+      delete params.search
+
+      const response = await apiClient.get('/export/ppa-summary', {
+        params,
+        responseType: 'blob',
+      })
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const link = document.createElement('a')
+      link.href = window.URL.createObjectURL(blob)
+      link.download = `PPA_Summary_${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    },
   },
 })

@@ -1,16 +1,18 @@
 import json
 import re
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.core.database import get_db
 from app.models.bms_record import BMSRecord
 from app.models.user import User
 from app.models.record_audit_log import RecordAuditLog
 from app.schemas.bms_record import BMSRecordCreate, BMSRecordUpdate, BMSRecordResponse
 from app.services.excel_ingestion import compute_row_hash
+from app.services.calculations import calculate_balances
 from app.api.deps import get_current_user
 from app.core.cache import clear_analytics_cache
 
@@ -226,6 +228,107 @@ def list_divisions(
     query = apply_role_scope(query, current_user)
     results = query.order_by(BMSRecord.division.asc()).all()
     return [r[0] for r in results if r[0]]
+
+
+@router.get("/by-ppa", response_model=list[dict])
+def list_records_by_ppa(
+    operating_unit: Optional[str] = None,
+    division: Optional[str] = None,
+    region: Optional[str] = None,
+    allotment_class: Optional[str] = None,
+    fund_source: Optional[str] = None,
+    appropriation_type: Optional[str] = None,
+    allotment_period: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns Level 1 consolidated summary grouped strictly by PPA Code.
+    Aggregates financial numbers across all lines belonging to each PPA.
+    """
+    query = db.query(
+        func.coalesce(BMSRecord.ppa_code, "UNASSIGNED").label("ppa_code"),
+        func.coalesce(func.max(BMSRecord.ppa_description), func.coalesce(BMSRecord.ppa_code, "Unassigned PPA")).label("ppa_description"),
+        func.count(BMSRecord.id).label("transaction_count"),
+        func.coalesce(func.sum(BMSRecord.appropriations), 0).label("total_appro"),
+        func.coalesce(func.sum(BMSRecord.appro_adjust), 0).label("total_appro_adj"),
+        func.coalesce(func.sum(BMSRecord.allotment), 0).label("total_allot"),
+        func.coalesce(func.sum(BMSRecord.realignment), 0).label("total_realign"),
+        func.coalesce(func.sum(BMSRecord.transfer_from), 0).label("total_trans_from"),
+        func.coalesce(func.sum(BMSRecord.transfer_to), 0).label("total_trans_to"),
+        func.coalesce(func.sum(BMSRecord.obligations_incurred), 0).label("total_obli"),
+        func.coalesce(func.sum(BMSRecord.disbursement), 0).label("total_disb"),
+    ).filter(BMSRecord.is_deleted == False)
+
+    query = apply_role_scope(query, current_user)
+
+    if operating_unit:
+        query = query.filter(BMSRecord.operating_unit == operating_unit)
+    if division:
+        query = query.filter(BMSRecord.division == division)
+    if region:
+        query = query.filter(BMSRecord.region == region)
+    if allotment_class:
+        query = query.filter(BMSRecord.allotment_class == allotment_class)
+    if fund_source:
+        query = query.filter(BMSRecord.fund_source == fund_source)
+    if appropriation_type:
+        query = query.filter(BMSRecord.appropriation_type == appropriation_type)
+    if allotment_period:
+        query = query.filter(BMSRecord.allotment_period == allotment_period)
+    if search:
+        s = f"%{search}%"
+        query = query.filter(
+            or_(
+                BMSRecord.particulars.ilike(s),
+                BMSRecord.ppa_control.ilike(s),
+                BMSRecord.ppa_code.ilike(s),
+                BMSRecord.account_code.ilike(s),
+                BMSRecord.operating_unit.ilike(s),
+                BMSRecord.uacs_pap_code.ilike(s),
+                BMSRecord.legal_basis.ilike(s),
+            )
+        )
+
+    results = query.group_by(BMSRecord.ppa_code).order_by(BMSRecord.ppa_code.asc()).all()
+
+    out = []
+    for r in results:
+        appro = Decimal(str(r.total_appro or 0))
+        appro_adj = Decimal(str(r.total_appro_adj or 0))
+        allot = Decimal(str(r.total_allot or 0))
+        realign = Decimal(str(r.total_realign or 0))
+        trans_from = Decimal(str(r.total_trans_from or 0))
+        trans_to = Decimal(str(r.total_trans_to or 0))
+        obli = Decimal(str(r.total_obli or 0))
+        disb = Decimal(str(r.total_disb or 0))
+
+        balances = calculate_balances(
+            appropriations=appro,
+            appro_adjust=appro_adj,
+            allotment=allot,
+            realignment=realign,
+            transfer_from=trans_from,
+            transfer_to=trans_to,
+            obligations_incurred=obli,
+            disbursement=disb
+        )
+
+        out.append({
+            "ppa_code": r.ppa_code,
+            "ppa_description": r.ppa_description or r.ppa_code,
+            "transaction_count": r.transaction_count,
+            "total_adjusted_appro": float(balances["total_adjusted_appro"]),
+            "total_adjusted_allotment": float(balances["total_adjusted_allotment"]),
+            "obligations_incurred": float(obli),
+            "disbursement": float(disb),
+            "unobligated": float(balances["unobligated"]),
+            "unpaid": float(balances["unpaid"]),
+            "unreleased": float(balances["unreleased"]),
+        })
+
+    return out
 
 
 @router.get("/{id}", response_model=BMSRecordResponse)

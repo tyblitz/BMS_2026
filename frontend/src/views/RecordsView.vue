@@ -9,19 +9,19 @@
         </p>
       </div>
 
-      <div class="flex items-center space-x-2.5">
+      <div class="flex flex-wrap items-center gap-2">
         <button
           @click="openCreateModal"
-          class="inline-flex items-center px-3.5 py-2 bg-deped-blue hover:bg-blue-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+          class="inline-flex items-center px-3 py-2 bg-deped-blue hover:bg-blue-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
         >
-          <span class="mr-1.5 text-base leading-none">+</span> Encode Line
+          <span class="mr-1 text-base leading-none">+</span> Encode Line
         </button>
 
         <router-link
           to="/upload"
-          class="inline-flex items-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+          class="inline-flex items-center px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition"
         >
-          <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
           Upload Excel
@@ -29,12 +29,24 @@
 
         <button
           @click="recordsStore.exportConsolidatedExcel"
-          class="inline-flex items-center px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+          class="inline-flex items-center px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+          title="Export 33-column consolidated workbook matching MS Access BMS"
         >
-          <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
           Export Conso (.xlsx)
+        </button>
+
+        <button
+          @click="recordsStore.exportPpaSummaryExcel"
+          class="inline-flex items-center px-3 py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+          title="Export consolidated summary by PPA code"
+        >
+          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export PPA Summary (.xlsx)
         </button>
       </div>
     </div>
@@ -79,14 +91,14 @@
 
     <!-- Filter Bar -->
     <div class="bms-card p-4 bg-white">
-      <div class="grid grid-cols-1 sm:grid-cols-6 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-4 md:grid-cols-7 gap-3">
         <!-- Search text -->
-        <div :class="divisions.length > 1 ? 'sm:col-span-1' : 'sm:col-span-2'">
+        <div class="sm:col-span-2 md:col-span-2">
           <input
             v-model="recordsStore.filters.search"
             @input="handleFilterChange"
             type="text"
-            placeholder="Search particulars, PPA, account code, station..."
+            placeholder="Search particulars, PPA, account code, Sub-ARO..."
             class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-deped-blue focus:outline-none"
           />
         </div>
@@ -134,26 +146,43 @@
             @change="handleFilterChange"
             class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
           >
-            <option value="">All Allotment Classes</option>
+            <option value="">All Classes</option>
             <option value="MOOE">MOOE</option>
             <option value="PS">PS</option>
             <option value="CO">CO</option>
           </select>
         </div>
 
-        <!-- Fund Source Filter -->
+        <!-- Appropriation Type Filter -->
         <div>
-          <input
-            v-model="recordsStore.filters.fund_source"
-            @input="handleFilterChange"
-            type="text"
-            placeholder="Filter Fund Source..."
-            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-deped-blue focus:outline-none"
-          />
+          <select
+            v-model="recordsStore.filters.appropriation_type"
+            @change="handleFilterChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option value="">All Appro Types</option>
+            <option value="Current">Current</option>
+            <option value="Continuing">Continuing</option>
+          </select>
+        </div>
+
+        <!-- Allotment Period Filter -->
+        <div>
+          <select
+            v-model="recordsStore.filters.allotment_period"
+            @change="handleFilterChange"
+            class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-1 focus:ring-deped-blue focus:outline-none"
+          >
+            <option value="">All Periods</option>
+            <option value="Q1">Q1</option>
+            <option value="Q2">Q2</option>
+            <option value="Q3">Q3</option>
+            <option value="Q4">Q4</option>
+          </select>
         </div>
 
         <!-- Reset Button -->
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center">
           <button
             @click="handleResetFilters"
             class="w-full text-xs py-2 px-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg font-medium transition"
@@ -164,8 +193,159 @@
       </div>
     </div>
 
-    <!-- Data Table Container -->
-    <div class="bms-card overflow-hidden bg-white">
+    <!-- Active Drilldown Banner (when filtered by PPA) -->
+    <div
+      v-if="recordsStore.filters.ppa_code"
+      class="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3 text-xs"
+    >
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 bg-blue-600 text-white font-bold rounded text-[11px]">
+          PPA DRILLDOWN ACTIVE
+        </span>
+        <span class="text-blue-950 font-medium">
+          Filtering line items for PPA Code: <strong class="font-bold">{{ recordsStore.filters.ppa_code }}</strong>
+        </span>
+      </div>
+
+      <button
+        @click="clearPpaDrilldown"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 hover:bg-blue-100 text-blue-900 rounded-lg font-semibold transition shadow-sm"
+      >
+        <span>&larr;</span> Back to Consolidated PPA Summary
+      </button>
+    </div>
+
+    <!-- View Mode Switcher Tab Bar -->
+    <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+      <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+        <button
+          @click="switchViewMode('ppa')"
+          :class="viewMode === 'ppa' ? 'bg-white text-deped-blue shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+          class="px-4 py-2 text-xs rounded-md transition flex items-center gap-1.5"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Level 1: Consolidated by PPA ({{ ppaList.length }})
+        </button>
+
+        <button
+          @click="switchViewMode('lines')"
+          :class="viewMode === 'lines' ? 'bg-white text-deped-blue shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+          class="px-4 py-2 text-xs rounded-md transition flex items-center gap-1.5"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+          Level 2: Transaction Line Items ({{ recordsStore.total }})
+        </button>
+      </div>
+
+      <div class="text-xs text-slate-500 font-medium hidden sm:block">
+        {{ viewMode === 'ppa' ? 'Showing program/project aggregations' : 'Showing detailed encoded vouchers & line items' }}
+      </div>
+    </div>
+
+    <!-- LEVEL 1: Consolidated PPA Table -->
+    <div v-if="viewMode === 'ppa'" class="bms-card overflow-hidden bg-white">
+      <div v-if="loadingPpa" class="p-8 text-center text-slate-500 text-xs">
+        <svg class="animate-spin h-6 w-6 text-deped-blue mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        Loading consolidated PPA summaries...
+      </div>
+
+      <div v-else-if="ppaList.length === 0" class="p-12 text-center text-slate-400 text-xs">
+        <p class="text-sm font-semibold text-slate-600 mb-1">No PPA records found</p>
+        <p>No PPA items match your active filters or scope.</p>
+      </div>
+
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50/80 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
+              <th class="py-3 px-3.5">PPA Code</th>
+              <th class="py-3 px-3.5">Program / Activity Description</th>
+              <th class="py-3 px-2.5 text-center">Lines</th>
+              <th class="py-3 px-3 text-right">Adj. Allotment</th>
+              <th class="py-3 px-3 text-right">Obligations</th>
+              <th class="py-3 px-3 text-right">Disbursements</th>
+              <th class="py-3 px-3 text-right font-semibold text-emerald-800">Unobligated</th>
+              <th class="py-3 px-3 text-right font-semibold text-amber-800">Unpaid</th>
+              <th class="py-3 px-3 text-center">Drilldown</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr
+              v-for="item in ppaList"
+              :key="item.ppa_code"
+              class="hover:bg-blue-50/40 transition-colors"
+            >
+              <!-- PPA Code -->
+              <td class="py-3 px-3.5 font-bold text-slate-900 font-mono">
+                <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-900 text-xs">
+                  {{ item.ppa_code }}
+                </span>
+              </td>
+
+              <!-- PPA Description -->
+              <td class="py-3 px-3.5 font-medium text-slate-800 max-w-[280px]">
+                <div class="line-clamp-2" :title="item.ppa_description">
+                  {{ item.ppa_description }}
+                </div>
+              </td>
+
+              <!-- Transaction count -->
+              <td class="py-3 px-2.5 text-center">
+                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded-full text-[10px]">
+                  {{ item.transaction_count }}
+                </span>
+              </td>
+
+              <!-- Adjusted Allotment -->
+              <td class="py-3 px-3 text-right font-mono font-semibold text-slate-900">
+                {{ formatCurrency(item.total_adjusted_allotment) }}
+              </td>
+
+              <!-- Obligations -->
+              <td class="py-3 px-3 text-right font-mono text-slate-700">
+                {{ formatCurrency(item.obligations_incurred) }}
+              </td>
+
+              <!-- Disbursements -->
+              <td class="py-3 px-3 text-right font-mono text-slate-700">
+                {{ formatCurrency(item.disbursement) }}
+              </td>
+
+              <!-- Unobligated -->
+              <td class="py-3 px-3 text-right font-mono font-bold text-emerald-700">
+                {{ formatCurrency(item.unobligated) }}
+              </td>
+
+              <!-- Unpaid -->
+              <td class="py-3 px-3 text-right font-mono font-bold text-amber-700">
+                {{ formatCurrency(item.unpaid) }}
+              </td>
+
+              <!-- Drilldown Action -->
+              <td class="py-3 px-3 text-center">
+                <button
+                  @click="drilldownPpa(item.ppa_code)"
+                  class="inline-flex items-center gap-1 px-3 py-1 bg-deped-blue hover:bg-blue-900 text-white font-semibold rounded text-[11px] shadow-sm transition"
+                >
+                  <span>View Lines</span>
+                  <span>&rarr;</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEVEL 2: Detailed Line Items Table -->
+    <div v-else class="bms-card overflow-hidden bg-white">
       <!-- Loading indicator -->
       <div v-if="recordsStore.loading" class="p-8 text-center text-slate-500 text-xs">
         <svg class="animate-spin h-6 w-6 text-deped-blue mx-auto mb-2" fill="none" viewBox="0 0 24 24">
@@ -219,10 +399,14 @@
               <!-- PPA & Account Code -->
               <td class="py-2.5 px-3.5 max-w-[220px]">
                 <div class="truncate font-semibold text-slate-700" :title="rec.ppa_control">
+                  <span v-if="rec.ppa_code" class="text-deped-blue font-bold font-mono mr-1">[{{ rec.ppa_code }}]</span>
                   {{ rec.ppa_control || 'N/A' }}
                 </div>
                 <div class="text-[10px] text-slate-400 font-mono">
                   UACS: {{ rec.account_code || '-' }}
+                  <span v-if="rec.legal_basis" class="ml-1 text-slate-500 font-semibold" :title="'Sub-ARO / Legal Basis: ' + rec.legal_basis">
+                    &bull; Sub-ARO: {{ rec.legal_basis }}
+                  </span>
                 </div>
               </td>
 
@@ -362,6 +546,10 @@ const recordsStore = useRecordsStore()
 const route = useRoute()
 const router = useRouter()
 
+const viewMode = ref('ppa') // 'ppa' (Level 1) or 'lines' (Level 2)
+const ppaList = ref([])
+const loadingPpa = ref(false)
+
 const isModalOpen = ref(false)
 const selectedRecord = ref(null)
 const deleteCandidate = ref(null)
@@ -372,6 +560,52 @@ const isSdoProper = (ou, div) => {
   if (!ou) return false
   if (div && ou === div) return true
   return ou.toLowerCase().startsWith('division of')
+}
+
+const loadPpaSummary = async () => {
+  loadingPpa.value = true
+  try {
+    const params = { ...recordsStore.filters }
+    delete params.skip
+    delete params.limit
+    delete params.ppa_code
+
+    // Clean empty values
+    Object.keys(params).forEach((k) => {
+      if (params[k] === '' || params[k] === null) delete params[k]
+    })
+
+    const res = await apiClient.get('/records/by-ppa', { params })
+    ppaList.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load PPA summary', err)
+  } finally {
+    loadingPpa.value = false
+  }
+}
+
+const switchViewMode = (mode) => {
+  viewMode.value = mode
+  if (mode === 'ppa') {
+    loadPpaSummary()
+  } else {
+    recordsStore.fetchRecords()
+  }
+}
+
+const drilldownPpa = (ppaCode) => {
+  recordsStore.filters.ppa_code = ppaCode
+  recordsStore.filters.skip = 0
+  viewMode.value = 'lines'
+  recordsStore.fetchRecords()
+}
+
+const clearPpaDrilldown = () => {
+  recordsStore.filters.ppa_code = ''
+  recordsStore.filters.skip = 0
+  viewMode.value = 'ppa'
+  loadPpaSummary()
+  recordsStore.fetchRecords()
 }
 
 const loadDivisions = async () => {
@@ -397,9 +631,6 @@ const loadOperatingUnits = async () => {
 }
 
 const syncRouteFilters = () => {
-  // CRITICAL: Always reset all filters to clean state first.
-  // This guarantees that clicking "Inspect", "View", or switching between dashboards
-  // never leaves stale school or division filters from a previous view.
   recordsStore.filters.skip = 0
   recordsStore.filters.limit = 25
   recordsStore.filters.search = route.query.search ? String(route.query.search) : ''
@@ -409,21 +640,33 @@ const syncRouteFilters = () => {
   recordsStore.filters.operating_unit = route.query.operating_unit ? String(route.query.operating_unit) : ''
   recordsStore.filters.division = route.query.division ? String(route.query.division) : ''
   recordsStore.filters.region = route.query.region ? String(route.query.region) : ''
+  recordsStore.filters.appropriation_type = route.query.appropriation_type ? String(route.query.appropriation_type) : ''
+  recordsStore.filters.allotment_period = route.query.allotment_period ? String(route.query.allotment_period) : ''
+  recordsStore.filters.ppa_code = route.query.ppa_code ? String(route.query.ppa_code) : ''
+
+  if (recordsStore.filters.ppa_code) {
+    viewMode.value = 'lines'
+  }
 }
 
 const handleDivisionChange = async () => {
-  // When division changes, reset school filter because the school belongs to previous division
   recordsStore.filters.operating_unit = ''
   recordsStore.filters.skip = 0
   await loadOperatingUnits()
+  if (viewMode.value === 'ppa') {
+    await loadPpaSummary()
+  }
   await recordsStore.fetchRecords()
 }
 
 const handleResetFilters = async () => {
   recordsStore.resetFilters()
-  // Clean URL query
   await router.replace({ path: '/records' })
   await loadOperatingUnits()
+  if (viewMode.value === 'ppa') {
+    await loadPpaSummary()
+  }
+  await recordsStore.fetchRecords()
 }
 
 let debounceTimer = null
@@ -431,6 +674,9 @@ const handleFilterChange = () => {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
     recordsStore.filters.skip = 0
+    if (viewMode.value === 'ppa') {
+      loadPpaSummary()
+    }
     recordsStore.fetchRecords()
   }, 300)
 }
@@ -446,6 +692,9 @@ const openEditModal = (rec) => {
 }
 
 const handleRecordSaved = () => {
+  if (viewMode.value === 'ppa') {
+    loadPpaSummary()
+  }
   recordsStore.fetchRecords()
 }
 
@@ -457,6 +706,9 @@ const executeSoftDelete = async () => {
   if (deleteCandidate.value) {
     await recordsStore.deleteRecord(deleteCandidate.value.id)
     deleteCandidate.value = null
+    if (viewMode.value === 'ppa') {
+      loadPpaSummary()
+    }
   }
 }
 
@@ -469,6 +721,9 @@ watch(
   async () => {
     syncRouteFilters()
     await loadOperatingUnits()
+    if (viewMode.value === 'ppa') {
+      loadPpaSummary()
+    }
     recordsStore.fetchRecords()
   }
 )
@@ -479,7 +734,9 @@ onMounted(async () => {
     loadDivisions(),
     loadOperatingUnits(),
   ])
+  if (viewMode.value === 'ppa') {
+    await loadPpaSummary()
+  }
   recordsStore.fetchRecords()
 })
 </script>
-
